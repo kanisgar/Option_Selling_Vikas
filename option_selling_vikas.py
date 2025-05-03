@@ -419,6 +419,7 @@ def run_os_strategy():
         ce_token = get_token(ce_symbol)
         time.sleep(1)
         pe_token = get_token(pe_symbol)
+        log_and_print("Now we have to wait till 09.19 AM")
         wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED")
