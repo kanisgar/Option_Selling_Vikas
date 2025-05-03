@@ -268,7 +268,7 @@ def place_market_order(symbol, token):
                 return res["data"]["orderid"]
         except Exception as e:
             log_and_print(f"❌ Order failed for {symbol}: {e}")
-            send_whatsapp_message(f"❌ OPTION SELLING : Order failed for {symbol}: {e}")
+            send_whatsapp_message(f"❌ OPTION SELLING VIKAS: Order failed for {symbol}: {e}")
         return None
 
 def place_sl_order(symbol, token, sl_price):
@@ -290,7 +290,7 @@ def place_sl_order(symbol, token, sl_price):
         log_and_print(f"🔐 SL order placed for {symbol} at {sl_price}")
     except Exception as e:
         log_and_print(f"❌ SL order failed for {symbol}: {e}")
-        send_whatsapp_message(f"❌ OPTION SELLING(PLACE SL QUICKLY) SL order failed for {symbol} and SL PRICE IS : {slprice} and Exception is: {e}")
+        send_whatsapp_message(f"❌ OPTION SELLING VIKAS:(PLACE SL QUICKLY) SL order failed for {symbol} and SL PRICE IS : {slprice} and Exception is: {e}")
 
 def cancel_order(order_id):
     """Cancel the order by its order ID."""
@@ -328,7 +328,7 @@ def square_off(symbol, token, order_id):
             log_and_print(f"🛑 SL already hit for {symbol}, skipping square off")
     except Exception as e:
         log_and_print(f"❌ Error while squaring off {symbol}: {e}")
-        send_whatsapp_message(f"❌ OPTION SELLING(DO MANUALLY!) : Error while squaring off {symbol}: {e}")
+        send_whatsapp_message(f"❌ OPTION SELLING VIKAS :(DO MANUALLY!) : Error while squaring off {symbol}: {e}")
 
 def get_order_entry_price(order_id):
     """Fetch the exact executed price for a specific order ID."""
@@ -348,7 +348,7 @@ def get_order_entry_price(order_id):
             log_and_print("⚠️ No order data received from orderBook()")
     except Exception as e:
         log_and_print(f"❌ Failed to fetch executed price for order ID {order_id}: {e}")
-        send_whatsapp_message(f"❌ Failed to fetch executed price for order ID {order_id}: {e}")
+        send_whatsapp_message(f"❌OPTION SELLING VIKAS: Failed to fetch executed price for order ID {order_id}: {e}")
     return None
 
 def is_order_executed(order_id):
@@ -421,9 +421,11 @@ def run_os_strategy():
         pe_token = get_token(pe_symbol)
         wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
+        send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED")
         ce_sl_order_1430, pe_sl_order_1430 = None
         reentered = False
         while get_current_ist_time().strftime("%H:%M") < "14:59":
+            tim = get_current_ist_time().strftime("%H:%M")
             time.sleep(30)
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
             if not reentered and is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
@@ -435,7 +437,9 @@ def run_os_strategy():
                     time.sleep(1)
                     pe_token = get_token(pe_symbol)
                     ce_sl_order_1430, pe_sl_order_1430 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
-                    reentered = True                
+                    reentered = True
+                    log_and_print(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY AT {tim}")
+                    send_whatsapp_message(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY PLACED AT {tim}")
         if not is_logged_in(refresh_token, smart_api):
             log_and_print("Session expired, re-authenticating before square-off...")
             smart_api = login()  
@@ -445,19 +449,21 @@ def run_os_strategy():
             square_off(ce_symbol, ce_token, ce_sl_order_1430)
             square_off(pe_symbol, pe_token, pe_sl_order_1430)        
         log_and_print("✅ All positions checked and squared off (if needed)")
+        send_whatsapp_message("✅Option Selling Vikas: All positions checked and squared off (if needed)")
 
     except Exception as e:
         log_and_print(f"❌ Error: {e}")
+        send_whatsapp_message(f"Option Selling Vikas:❌ Error: {e}")
 
 # To run it directly:
 if __name__ == "__main__":
     try:
         log_and_print(f"job is running on {system_platform}")
         if is_market_holiday():
-            #send_whatsapp_message(f"🔔:Market holiday on {current_date}. Exiting script.")
+            send_whatsapp_message(f"🔔:Option Selling Vikas: Market holiday on {current_date}. Exiting script.")
             log_and_print("Market holiday today. Exiting script.")
         else:
-            log_and_print("📈 Non-expiry day detected. Running regular strategy...")
+            log_and_print("📈Running regular strategy...")
             run_os_strategy()  # Call the normal strategy
     except Exception as e:
         log_and_print(f"❌ Exception in trading script: {str(e)}")
