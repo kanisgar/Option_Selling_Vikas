@@ -7,6 +7,10 @@ import pytz
 import time
 from collections import deque
 import logging
+import boto3
+import json
+import platform
+import getpass
 from twilio.rest import Client
 
 # --------- Account Config ---------
@@ -15,6 +19,9 @@ CLIENT_CODE = 'AAAI570791'
 PASSWORD = '1611'
 TOTP_SECRET = 'ZXI5JF7SKHJND6W2XCBHYPLEJU'
 refresh_token = None
+
+#For EC2 False by Default
+should_stop_ec2_on_exit = False
 
 #-----------Twilio Config -----------
 account_sid = 'AC6ef902b81d63731c13b746613aadb2aa'
@@ -35,9 +42,24 @@ client = Client(account_sid, auth_token)
 current_date = datetime.now().strftime("%Y-%m-%d")
 india_tz = pytz.timezone("Asia/Kolkata")
 finland_tz = pytz.timezone("Europe/Helsinki")
-holiday_location="C:\Kani_Personal\Automate_Trading\AlgoTrading\\"
+system_platform = platform.system()
+current_user = getpass.getuser()
 
-log_path = f"C:/Kani_Personal/Automate_Trading/AlgoTrading/job_logs/job_optionSellingVikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
+#holiday_location="C:\Kani_Personal\Automate_Trading\AlgoTrading\\"
+#log_path = f"C:/Kani_Personal/Automate_Trading/AlgoTrading/job_logs/job_optionSellingVikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
+if system_platform == "Windows":
+    holiday_location = "C:\\Kani_Personal\\Automate_Trading\\AlgoTrading\\"
+    log_path = f"C:/Kani_Personal/Automate_Trading/Option_Selling_Vikas/job_logs/job_option_selling_vikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
+
+elif system_platform == "Darwin":  # Mac
+    holiday_location = "/Users/kanisgar/Documents/AlgoTrading/"
+    log_path = f"/Users/kanisgar/Documents/Option_Selling_Vikas/job_logs/job_option_selling_vikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
+
+elif system_platform == "Linux":
+    if current_user == "ec2-user":
+        holiday_location = "/home/ec2-user/AlgoTrading/"
+        log_path = f"/home/ec2-user/Option_Selling_Vikas/job_logs/job_option_selling_vikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
+        should_stop_ec2_on_exit = False
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Configure logging
@@ -50,6 +72,26 @@ logging.basicConfig(
 )
 last_logged_time = 0
 ltp_call_timestamps = deque()
+
+#THE BELOW METHOD IS NOT USED ANYWHERE IN THE CODE, NEED TO CALL SUPPOSE EC2 EXIT REQD.
+def trigger_ec2_shutdown_lambda():
+    FUNCTION_NAME = "stopEC2Instance"
+    INSTANCE_ID = "i-0bc461a1bc178f190"
+    
+    payload = {
+        "instance_id": INSTANCE_ID
+    }
+
+    try:
+        lambda_client = boto3.client("lambda", region_name="us-east-1")  # Adjust your region
+        response = lambda_client.invoke(
+            FunctionName=FUNCTION_NAME,
+            InvocationType="Event",  # Async execution
+            Payload=json.dumps(payload).encode('utf-8')
+        )
+        print("🛑 EC2 shutdown Lambda triggered successfully.")
+    except Exception as e:
+        print(f"⚠️ Failed to trigger Lambda: {e}")
 
 def log_and_print(message, level="info"):
     print(message)
@@ -410,6 +452,7 @@ def run_os_strategy():
 # To run it directly:
 if __name__ == "__main__":
     try:
+        log_and_print(f"job is running on {system_platform}")
         if is_market_holiday():
             #send_whatsapp_message(f"🔔:Market holiday on {current_date}. Exiting script.")
             log_and_print("Market holiday today. Exiting script.")
