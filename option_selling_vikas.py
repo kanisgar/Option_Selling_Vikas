@@ -59,7 +59,7 @@ elif system_platform == "Linux":
     if current_user == "ec2-user":
         holiday_location = "/home/ec2-user/AlgoTrading/"
         log_path = f"/home/ec2-user/Option_Selling_Vikas/job_logs/job_option_selling_vikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
-        should_stop_ec2_on_exit = False
+        should_stop_ec2_on_exit = True
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Configure logging
