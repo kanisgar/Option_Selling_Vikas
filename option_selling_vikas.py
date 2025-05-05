@@ -412,7 +412,7 @@ def run_os_strategy():
         login()
         expiry = get_expiry_day()
         print(expiry)
-        #wait_until_ist("09:18")
+        wait_until_ist("09:18")
         atm_strike = get_sensex_atm()
         print(atm_strike)
         ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
