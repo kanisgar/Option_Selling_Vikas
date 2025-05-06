@@ -1,4 +1,3 @@
-import time
 import os
 from datetime import datetime, timedelta
 import pyotp
@@ -30,8 +29,9 @@ auth_token = '06c408e1a82a20ae2b839f2cceac4705'  # Replace with actual token
 # --------- Risk Config ---------
 RISK_1043 = 0.40
 RISK_1113 = 0.34
-QTY = 20  # Adjust based on your margin/lot
-
+QTY = 60  # Adjust based on your margin/lot
+EXP_QTY = 40
+auto_reentry = True #Make it True incase if no re-entry is required
 # Initialize SmartConnect
 smart_api = SmartConnect(api_key=API_KEY)
 
@@ -412,6 +412,12 @@ def run_os_strategy():
         login()
         expiry = get_expiry_day()
         print(expiry)
+        global QTY
+        if is_expiry_day():
+            QTY = EXP_QTY
+            log_and_print(f"📉 Today is expiry. Quantity set to EXP_QTY: {QTY}")
+        else:
+            log_and_print(f"📈 Today is not expiry. Quantity remains as QTY: {QTY}")
         wait_until_ist("09:18")
         atm_strike = get_sensex_atm()
         print(atm_strike)
@@ -429,18 +435,28 @@ def run_os_strategy():
             tim = get_current_ist_time().strftime("%H:%M")
             time.sleep(30)
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
-            if not reentered and is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
-                if get_current_ist_time().strftime("%H:%M") < "14:15":
-                    log_and_print("⚠️ Both SL hit, re-entering trade before 14:15...")
-                    atm_strike = get_sensex_atm()
-                    ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
-                    ce_token = get_token(ce_symbol)
-                    time.sleep(1)
-                    pe_token = get_token(pe_symbol)
-                    ce_sl_order_1430, pe_sl_order_1430 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
-                    reentered = True
-                    log_and_print(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY AT {tim}")
-                    send_whatsapp_message(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY PLACED AT {tim}")
+            if is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
+                if not reentered and auto_reentry:
+                    if tim < "14:15":
+                        log_and_print("⚠️ Both SL hit, re-entering trade before 14:15...")
+                        atm_strike = get_sensex_atm()
+                        ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
+                        ce_token = get_token(ce_symbol)
+                        time.sleep(1)
+                        pe_token = get_token(pe_symbol)
+                        ce_sl_order_1430, pe_sl_order_1430 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
+                        reentered = True
+                        log_and_print(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY AT {tim}")
+                        send_whatsapp_message(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY PLACED AT {tim}")
+                elif not auto_reentry:
+                    log_and_print(f"🚫 EARLY EXIT at {tim} :Double Side SL hit. Re-entry not allowed.Do Manual action incase required.")
+                    send_whatsapp_message(f"🚫 EARLY EXIT at {tim} ->OPTION SELLING VIKAS: Double Side SL hit. Re-entry not allowed.Do Manual action incase required.")
+                    return
+                else reentered:
+                    if is_order_executed(ce_sl_order_1430) and is_order_executed(pe_sl_order_1430):
+                        log_and_print(f"🚫 Exiting early at {tim}... 4 side SL hit even after re-entry. No more trades.")
+                        send_whatsapp_message(f"🚫 EARLY EXIT at {tim} -> OPTION SELLING VIKAS: 4 side SL hit even after re-entry. No more trades.")
+                        return
         if not is_logged_in(refresh_token, smart_api):
             log_and_print("Session expired, re-authenticating before square-off...")
             smart_api = login()  
