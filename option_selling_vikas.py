@@ -452,7 +452,7 @@ def run_os_strategy():
                     log_and_print(f"🚫 EARLY EXIT at {tim} :Double Side SL hit. Re-entry not allowed.Do Manual action incase required.")
                     send_whatsapp_message(f"🚫 EARLY EXIT at {tim} ->OPTION SELLING VIKAS: Double Side SL hit. Re-entry not allowed.Do Manual action incase required.")
                     return
-                else reentered:
+                elif reentered:
                     if is_order_executed(ce_sl_order_1430) and is_order_executed(pe_sl_order_1430):
                         log_and_print(f"🚫 Exiting early at {tim}... 4 side SL hit even after re-entry. No more trades.")
                         send_whatsapp_message(f"🚫 EARLY EXIT at {tim} -> OPTION SELLING VIKAS: 4 side SL hit even after re-entry. No more trades.")
