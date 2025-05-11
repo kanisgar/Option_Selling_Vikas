@@ -29,8 +29,8 @@ auth_token = '06c408e1a82a20ae2b839f2cceac4705'  # Replace with actual token
 # --------- Risk Config ---------
 RISK_1043 = 0.40
 RISK_1113 = 0.34
-QTY = 60  # Adjust based on your margin/lot
-EXP_QTY = 40
+QTY = 20  # Adjust based on your margin/lot
+EXP_QTY = 20
 auto_reentry = True #Make it True incase if no re-entry is required
 # Initialize SmartConnect
 smart_api = SmartConnect(api_key=API_KEY)
@@ -59,7 +59,7 @@ elif system_platform == "Linux":
     if current_user == "ec2-user":
         holiday_location = "/home/ec2-user/AlgoTrading/"
         log_path = f"/home/ec2-user/Option_Selling_Vikas/job_logs/job_option_selling_vikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
-        should_stop_ec2_on_exit = True
+        should_stop_ec2_on_exit = False
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
 # Configure logging
@@ -264,11 +264,51 @@ def place_market_order(symbol, token):
                 "quantity": QTY
             }
             res = smart_api.placeOrder(order)
-            if res.get("status"):
-                return res["data"]["orderid"]
+            if res:
+                return res
         except Exception as e:
             log_and_print(f"❌ Order failed for {symbol}: {e}")
             send_whatsapp_message(f"❌ OPTION SELLING VIKAS: Order failed for {symbol}: {e}")
+        return None
+
+#The below method is not in use and it wont work since basket order placing is not available in smart_api Angelone
+def place_basket_order(ce_symbol, ce_token, pe_symbol, pe_token):
+    try:
+        basket_orders = [
+            {
+                "exchange": "BFO",
+                "tradingsymbol": ce_symbol,
+                "symboltoken": ce_token,
+                "transactiontype": "SELL",
+                "ordertype": "MARKET",
+                "producttype": "INTRADAY",
+                "duration": "DAY",
+                "price": "0",
+                "triggerprice": "0",
+                "quantity": QTY
+            },
+            {
+                "exchange": "BFO",
+                "tradingsymbol": pe_symbol,
+                "symboltoken": pe_token,
+                "transactiontype": "SELL",
+                "ordertype": "MARKET",
+                "producttype": "INTRADAY",
+                "duration": "DAY",
+                "price": "0",
+                "triggerprice": "0",
+                "quantity": QTY
+            }
+        ]
+
+        response = smart_api.placeBasketOrder(basket_orders)
+        log_and_print(f"✅ Basket order placed for CE and PE: {response}")
+        send_whatsapp_message(f"✅ Basket order placed:\nCE: {ce_symbol}, PE: {pe_symbol}")
+        return response
+
+    except Exception as e:
+        log_and_print(f"❌ Basket order placement failed: {e}")
+        send_whatsapp_message(f"❌ Basket order failed:\n{e}")
         return None
 
 def place_sl_order(symbol, token, sl_price):
@@ -367,51 +407,60 @@ def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
 
     ce_order_id = place_market_order(ce_symbol, ce_token)
     pe_order_id = place_market_order(pe_symbol, pe_token)
-
-    ce_ltp = get_order_entry_price(ce_order_id)
-    pe_ltp = get_order_entry_price(pe_order_id)
     
-    if ce_entry_price is None or pe_entry_price is None:
-        log_and_print("❌ Failed to get entry prices. Exiting...")
-        return
+    if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
 
-    ce_sl = round(ce_ltp * (1 + risk_pct), 1)
-    pe_sl = round(pe_ltp * (1 + risk_pct), 1)
-
-    ce_sl_order_id = place_sl_order(ce_symbol, ce_token, ce_sl)
-    pe_sl_order_id = place_sl_order(pe_symbol, pe_token, pe_sl)
-
-    return ce_sl_order_id, pe_sl_order_id
+        ce_entry_price = get_order_entry_price(ce_order_id)
+        pe_entry_price = get_order_entry_price(pe_order_id)
+        
+        if ce_entry_price is None or pe_entry_price is None:
+            log_and_print("❌ Failed to get entry prices. Exiting...")
+            return
+        
+        ce_sl = round(ce_entry_price * (1 + risk_pct), 1)
+        pe_sl = round(pe_entry_price * (1 + risk_pct), 1)
+        
+        ce_sl_order_id = place_sl_order(ce_symbol, ce_token, ce_sl)
+        pe_sl_order_id = place_sl_order(pe_symbol, pe_token, pe_sl)
+        
+        return ce_sl_order_id, pe_sl_order_id
 
 def execute_expiry_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
 
     # Place ATM CE and PE orders
     ce_order_id = place_market_order(ce_symbol, ce_token)
     pe_order_id = place_market_order(pe_symbol, pe_token)
+    
+    if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
 
-    # Fetch entry prices for the placed orders
-    ce_entry_price = get_order_entry_price(ce_order_id)
-    pe_entry_price = get_order_entry_price(pe_order_id)
-
-    if ce_entry_price is None or pe_entry_price is None:
-        log_and_print("❌ Failed to get entry prices. Exiting...")
-        return
-
-    # Calculate stop-loss based on the entry price
-    ce_sl = round(ce_entry_price * (1 + risk_pct), 1)
-    pe_sl = round(pe_entry_price * (1 + risk_pct), 1)
-
-    # Place stop-loss orders for the ATM CE and PE
-    ce_sl_order_id = place_sl_order(ce_symbol, ce_token, ce_sl)
-    pe_sl_order_id = place_sl_order(pe_symbol, pe_token, pe_sl)
-    return ce_sl_order_id, pe_sl_order_id
+        # Fetch entry prices for the placed orders
+        ce_entry_price = get_order_entry_price(ce_order_id)
+        pe_entry_price = get_order_entry_price(pe_order_id)
+        
+        if ce_entry_price is None or pe_entry_price is None:
+            log_and_print("❌ Failed to get entry prices. Exiting...")
+            return
+        
+        # Calculate stop-loss based on the entry price
+        ce_sl = round(ce_entry_price * (1 + risk_pct), 1)
+        pe_sl = round(pe_entry_price * (1 + risk_pct), 1)
+        
+        # Place stop-loss orders for the ATM CE and PE
+        ce_sl_order_id = place_sl_order(ce_symbol, ce_token, ce_sl)
+        pe_sl_order_id = place_sl_order(pe_symbol, pe_token, pe_sl)
+        return ce_sl_order_id, pe_sl_order_id
+    
+    else:
+        send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
+        raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
+        return None
 
 # ---------- STRATEGY WRAPPER ----------
 def run_os_strategy():
     try:
         login()
         expiry = get_expiry_day()
-        print(expiry)
+        log_and_print(expiry)
         global QTY
         if is_expiry_day():
             QTY = EXP_QTY
@@ -420,7 +469,7 @@ def run_os_strategy():
             log_and_print(f"📈 Today is not expiry. Quantity remains as QTY: {QTY}")
         wait_until_ist("09:18")
         atm_strike = get_sensex_atm()
-        print(atm_strike)
+        log_and_print(atm_strike)
         ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
         ce_token = get_token(ce_symbol)
         time.sleep(1)
@@ -428,8 +477,9 @@ def run_os_strategy():
         log_and_print("Now we have to wait till 09.19 AM")
         wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
-        send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED")
-        ce_sl_order_1430, pe_sl_order_1430 = None
+        send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
+        ce_sl_order_1430 = None
+        pe_sl_order_1430 = None
         reentered = False
         while get_current_ist_time().strftime("%H:%M") < "14:59":
             tim = get_current_ist_time().strftime("%H:%M")
@@ -437,7 +487,7 @@ def run_os_strategy():
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
             if is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
                 if not reentered and auto_reentry:
-                    if tim < "14:15":
+                    if get_current_ist_time().strftime("%H:%M") < "14:15":
                         log_and_print("⚠️ Both SL hit, re-entering trade before 14:15...")
                         atm_strike = get_sensex_atm()
                         ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
@@ -486,5 +536,6 @@ if __name__ == "__main__":
         log_and_print(f"❌ Exception in trading script: {str(e)}")
         send_whatsapp_message(f"❌ Option Selling Vikas: Exception in trading script: {str(e)}")
     finally:
-        log_and_print ("OS:Logging out inside finally")
+        log_and_print ("❌ Option Selling Vikas:Logging out inside finally")
+        send_whatsapp_message(f"❌ Option Selling Vikas:Executing Finally Block")
         smart_api.terminateSession(CLIENT_CODE)
