@@ -463,6 +463,9 @@ def execute_expiry_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pc
 # ---------- STRATEGY WRAPPER ----------
 def run_os_strategy():
     try:
+        ce_sl_order_1430 = None
+        pe_sl_order_1430 = None
+        reentered = False
         login()
         expiry = get_expiry_day()
         log_and_print(expiry)
@@ -483,9 +486,6 @@ def run_os_strategy():
         wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
-        ce_sl_order_1430 = None
-        pe_sl_order_1430 = None
-        reentered = False
         while get_current_ist_time().strftime("%H:%M") < "14:59":
             tim = get_current_ist_time().strftime("%H:%M")
             time.sleep(30)
