@@ -424,6 +424,11 @@ def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
         pe_sl_order_id = place_sl_order(pe_symbol, pe_token, pe_sl)
         
         return ce_sl_order_id, pe_sl_order_id
+    
+    else:
+        send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
+        raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
+        return None        
 
 def execute_expiry_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
 
