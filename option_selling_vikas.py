@@ -232,7 +232,7 @@ def get_ltp(symbol, symbol_token):
     
     try:
         #if not is_logged_in(refresh_token):
-         #   log_and_print("Session expired, re-authenticating before square-off...")
+         #   log_and_print("Session expired, re-authenticating before square_off...")
          #   smart_api.terminateSession(CLIENT_CODE)
          #   login()
         current_time = time.time()
@@ -259,7 +259,7 @@ def place_market_order(symbol, token):
                 "transactiontype": "SELL",
                 "exchange": "BFO",
                 "ordertype": "MARKET",
-                "producttype": "INTRADAY",
+                "producttype": "CARRYFORWARD",
                 "duration": "DAY",
                 "quantity": QTY
             }
@@ -269,6 +269,25 @@ def place_market_order(symbol, token):
         except Exception as e:
             log_and_print(f"❌ Order failed for {symbol}: {e}")
             send_whatsapp_message(f"❌ OPTION SELLING VIKAS: Order failed for {symbol}: {e}")
+        return None
+
+def emergency_exit(symbol, token):
+        try:
+            order = {
+                "variety": "NORMAL",
+                "tradingsymbol": symbol,
+                "symboltoken": token,
+                "transactiontype": "BUY",
+                "exchange": "BFO",
+                "ordertype": "MARKET",
+                "producttype": "CARRYFORWARD",
+                "duration": "DAY",
+                "quantity": QTY
+            }
+            smart_api.placeOrder(order)
+        except Exception as e:
+            log_and_print(f"❌OPTION SELLING VIKAS: Emergency Exit Order failed for {symbol}: {e}")
+            send_whatsapp_message(f"❌ OPTION SELLING VIKAS:Emergency Exit Order failed for {symbol}: {e}")
         return None
 
 #The below method is not in use and it wont work since basket order placing is not available in smart_api Angelone
@@ -320,7 +339,7 @@ def place_sl_order(symbol, token, sl_price):
             "transactiontype": "BUY",
             "exchange": "BFO",
             "ordertype": "STOPLOSS_LIMIT",
-            "producttype": "INTRADAY",
+            "producttype": "CARRYFORWARD",
             "duration": "DAY",
             "price": sl_price,
             "triggerprice": sl_price,
@@ -393,6 +412,7 @@ def get_order_entry_price(order_id):
 
 def is_order_executed(order_id):
     try:
+        time.sleep(1)
         order_details = smart_api.orderBook()
         for order in order_details.get("data", []):
             if order["orderid"] == order_id and order["status"].lower() == "complete":
@@ -406,6 +426,7 @@ def is_order_executed(order_id):
 def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
 
     ce_order_id = place_market_order(ce_symbol, ce_token)
+    time.sleep(7)
     pe_order_id = place_market_order(pe_symbol, pe_token)
     
     if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
@@ -426,14 +447,19 @@ def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
         return ce_sl_order_id, pe_sl_order_id
     
     else:
-        send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
-        raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
-        return None        
+        if is_order_executed(ce_order_id):
+            emergency_exit(ce_symbol,ce_token)
+        elif is_order_executed(pe_order_id):
+            emergency_exit(pe_symbol,pe_token)
+        send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER and TRIGGERED EMERGENCY EXIT")
+        raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER AND TRIGGERED EMERGENCY EXIT")
+        return None   
 
 def execute_expiry_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
 
     # Place ATM CE and PE orders
     ce_order_id = place_market_order(ce_symbol, ce_token)
+    time.sleep(7)
     pe_order_id = place_market_order(pe_symbol, pe_token)
     
     if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
@@ -456,8 +482,12 @@ def execute_expiry_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pc
         return ce_sl_order_id, pe_sl_order_id
     
     else:
-        send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
-        raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER")
+        if is_order_executed(ce_order_id):
+            emergency_exit(ce_symbol,ce_token)
+        elif is_order_executed(pe_order_id):
+            emergency_exit(pe_symbol,pe_token)
+        send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER and TRIGGERED EMERGENCY EXIT")
+        raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER AND TRIGGERED EMERGENCY EXIT")
         return None
 
 # ---------- STRATEGY WRAPPER ----------
@@ -513,7 +543,7 @@ def run_os_strategy():
                         send_whatsapp_message(f"🚫 EARLY EXIT at {tim} -> OPTION SELLING VIKAS: 4 side SL hit even after re-entry. No more trades.")
                         return
         if not is_logged_in(refresh_token, smart_api):
-            log_and_print("Session expired, re-authenticating before square-off...")
+            log_and_print("Session expired, re-authenticating before square_off...")
             smart_api = login()  
         square_off(ce_symbol, ce_token, ce_sl_order_1043)
         square_off(pe_symbol, pe_token, pe_sl_order_1043)
