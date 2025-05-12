@@ -29,6 +29,8 @@ auth_token = '06c408e1a82a20ae2b839f2cceac4705'  # Replace with actual token
 # --------- Risk Config ---------
 RISK_1043 = 0.40
 RISK_1113 = 0.34
+producttype="INTRADAY"
+#producttype='CARRYFORWARD"
 QTY = 20  # Adjust based on your margin/lot
 EXP_QTY = 20
 auto_reentry = True #Make it True incase if no re-entry is required
@@ -259,7 +261,7 @@ def place_market_order(symbol, token):
                 "transactiontype": "SELL",
                 "exchange": "BFO",
                 "ordertype": "MARKET",
-                "producttype": "CARRYFORWARD",
+                "producttype": producttype,
                 "duration": "DAY",
                 "quantity": QTY
             }
@@ -280,7 +282,7 @@ def emergency_exit(symbol, token):
                 "transactiontype": "BUY",
                 "exchange": "BFO",
                 "ordertype": "MARKET",
-                "producttype": "CARRYFORWARD",
+                "producttype": producttype,
                 "duration": "DAY",
                 "quantity": QTY
             }
@@ -300,7 +302,7 @@ def place_basket_order(ce_symbol, ce_token, pe_symbol, pe_token):
                 "symboltoken": ce_token,
                 "transactiontype": "SELL",
                 "ordertype": "MARKET",
-                "producttype": "INTRADAY",
+                "producttype": producttype,
                 "duration": "DAY",
                 "price": "0",
                 "triggerprice": "0",
@@ -312,7 +314,7 @@ def place_basket_order(ce_symbol, ce_token, pe_symbol, pe_token):
                 "symboltoken": pe_token,
                 "transactiontype": "SELL",
                 "ordertype": "MARKET",
-                "producttype": "INTRADAY",
+                "producttype": producttype,
                 "duration": "DAY",
                 "price": "0",
                 "triggerprice": "0",
@@ -339,7 +341,7 @@ def place_sl_order(symbol, token, sl_price):
             "transactiontype": "BUY",
             "exchange": "BFO",
             "ordertype": "STOPLOSS_LIMIT",
-            "producttype": "CARRYFORWARD",
+            "producttype": producttype,
             "duration": "DAY",
             "price": sl_price,
             "triggerprice": sl_price,
@@ -349,7 +351,7 @@ def place_sl_order(symbol, token, sl_price):
         log_and_print(f"🔐 SL order placed for {symbol} at {sl_price}")
     except Exception as e:
         log_and_print(f"❌ SL order failed for {symbol}: {e}")
-        send_whatsapp_message(f"❌ OPTION SELLING VIKAS:(PLACE SL QUICKLY) SL order failed for {symbol} and SL PRICE IS : {slprice} and Exception is: {e}")
+        send_whatsapp_message(f"❌ OPTION SELLING VIKAS:(PLACE SL QUICKLY) SL order failed for {symbol} and SL PRICE IS : {sl_price} and Exception is: {e}")
 
 def cancel_order(order_id):
     """Cancel the order by its order ID."""
@@ -377,7 +379,7 @@ def square_off(symbol, token, order_id):
                 "transactiontype": "BUY",
                 "exchange": "BFO",
                 "ordertype": "MARKET",
-                "producttype": "INTRADAY",
+                "producttype": producttype,
                 "duration": "DAY",
                 "quantity": QTY
             }
@@ -522,8 +524,8 @@ def run_os_strategy():
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
             if is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
                 if not reentered and auto_reentry:
-                    if get_current_ist_time().strftime("%H:%M") < "14:15":
-                        log_and_print("⚠️ Both SL hit, re-entering trade before 14:15...")
+                    if get_current_ist_time().strftime("%H:%M") < "13:00":
+                        log_and_print("⚠️ Both SL hit, re-entering trade before 13:00...")
                         atm_strike = get_sensex_atm()
                         ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
                         ce_token = get_token(ce_symbol)
