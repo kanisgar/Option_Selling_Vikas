@@ -430,8 +430,10 @@ def is_order_executed(order_id):
 def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
 
     ce_order_id = place_market_order(ce_symbol, ce_token)
+    #log_and_print(f"ce_order_id is {ce_order_id}")
     time.sleep(5)
     pe_order_id = place_market_order(pe_symbol, pe_token)
+    #log_and_print(f"pe_order_id is {pe_order_id}")
     
     if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
 
@@ -451,48 +453,19 @@ def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
         return ce_sl_order_id, pe_sl_order_id
     
     else:
-        if is_order_executed(ce_order_id):
-            emergency_exit(ce_symbol,ce_token)
-        elif is_order_executed(pe_order_id):
-            emergency_exit(pe_symbol,pe_token)
+        if ce_order_id:
+            if is_order_executed(ce_order_id):
+                emergency_exit(ce_symbol,ce_token)
+            else:
+                cancel_order(ce_order_id)
+        if pe_order_id:
+            if is_order_executed(pe_order_id):
+                emergency_exit(pe_symbol,pe_token)
+            else:
+                cancel_order(pe_order_id)
         send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER and TRIGGERED EMERGENCY EXIT")
         raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER AND TRIGGERED EMERGENCY EXIT")
-        return None   
-
-def execute_expiry_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
-
-    # Place ATM CE and PE orders
-    ce_order_id = place_market_order(ce_symbol, ce_token)
-    time.sleep(7)
-    pe_order_id = place_market_order(pe_symbol, pe_token)
-    
-    if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
-
-        # Fetch entry prices for the placed orders
-        ce_entry_price = get_order_entry_price(ce_order_id)
-        pe_entry_price = get_order_entry_price(pe_order_id)
-        
-        if ce_entry_price is None or pe_entry_price is None:
-            log_and_print("❌ Failed to get entry prices. Exiting...")
-            return
-        
-        # Calculate stop-loss based on the entry price
-        ce_sl = round(ce_entry_price * (1 + risk_pct), 1)
-        pe_sl = round(pe_entry_price * (1 + risk_pct), 1)
-        
-        # Place stop-loss orders for the ATM CE and PE
-        ce_sl_order_id = place_sl_order(ce_symbol, ce_token, ce_sl)
-        pe_sl_order_id = place_sl_order(pe_symbol, pe_token, pe_sl)
-        return ce_sl_order_id, pe_sl_order_id
-    
-    else:
-        if is_order_executed(ce_order_id):
-            emergency_exit(ce_symbol,ce_token)
-        elif is_order_executed(pe_order_id):
-            emergency_exit(pe_symbol,pe_token)
-        send_whatsapp_message(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER and TRIGGERED EMERGENCY EXIT")
-        raise Exception(f"OPTION SELLING VIKAS: UNABLE TO PLACE MARKET ORDER AND TRIGGERED EMERGENCY EXIT")
-        return None
+        return None 
 
 # ---------- STRATEGY WRAPPER ----------
 def run_os_strategy():
@@ -516,7 +489,7 @@ def run_os_strategy():
         ce_token = get_token(ce_symbol)
         time.sleep(1)
         pe_token = get_token(pe_symbol)
-        log_and_print("Now we have to wait till 09.19 AM")
+        log_and_print("Now we have to wait till 09.18:55 AM")
         #wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
