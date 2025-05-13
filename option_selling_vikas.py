@@ -128,7 +128,7 @@ def get_current_ist_time():
 def wait_until_ist(target_time):
     while True:
         now = get_current_ist_time()
-        if now.strftime("%H:%M") >= target_time:
+        if now.strftime("%H:%M:%S") >= target_time:
             break
         time.sleep(1)
 
@@ -430,7 +430,7 @@ def is_order_executed(order_id):
 def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
 
     ce_order_id = place_market_order(ce_symbol, ce_token)
-    time.sleep(7)
+    time.sleep(5)
     pe_order_id = place_market_order(pe_symbol, pe_token)
     
     if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
@@ -509,7 +509,7 @@ def run_os_strategy():
             log_and_print(f"📉 Today is expiry. Quantity set to EXP_QTY: {QTY}")
         else:
             log_and_print(f"📈 Today is not expiry. Quantity remains as QTY: {QTY}")
-        wait_until_ist("09:19")
+        wait_until_ist("09:18:55")
         atm_strike = get_sensex_atm()
         log_and_print(atm_strike)
         ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
