@@ -365,6 +365,7 @@ def cancel_order(order_id):
 
 def square_off(symbol, token, order_id):
     try:
+        time.sleep(1)
         order_status = smart_api.orderBook()
         sl_hit = any(order.get("orderid") == order_id and order.get("status") == "complete"
                      for order in order_status.get("data", []))
@@ -394,6 +395,7 @@ def square_off(symbol, token, order_id):
 def get_order_entry_price(order_id):
     """Fetch the exact executed price for a specific order ID."""
     try:
+        time.sleep(1)
         all_orders = smart_api.orderBook()  # Get the list of all today's orders
         if all_orders.get("status"):
             orders = all_orders["data"]
