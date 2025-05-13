@@ -509,7 +509,7 @@ def run_os_strategy():
             log_and_print(f"📉 Today is expiry. Quantity set to EXP_QTY: {QTY}")
         else:
             log_and_print(f"📈 Today is not expiry. Quantity remains as QTY: {QTY}")
-        wait_until_ist("09:18")
+        wait_until_ist("09:19")
         atm_strike = get_sensex_atm()
         log_and_print(atm_strike)
         ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
@@ -517,7 +517,7 @@ def run_os_strategy():
         time.sleep(1)
         pe_token = get_token(pe_symbol)
         log_and_print("Now we have to wait till 09.19 AM")
-        wait_until_ist("09:19")
+        #wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
         while get_current_ist_time().strftime("%H:%M") < "14:59":
