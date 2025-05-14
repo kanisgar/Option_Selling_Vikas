@@ -11,6 +11,7 @@ import json
 import platform
 import getpass
 from twilio.rest import Client
+import sys
 
 # --------- Account Config ---------
 API_KEY = 'I39xpH90'
@@ -63,6 +64,13 @@ elif system_platform == "Linux":
         log_path = f"/home/ec2-user/Option_Selling_Vikas/job_logs/job_option_selling_vikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
         should_stop_ec2_on_exit = False
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+# 🔁 Use the holiday_location to build shared path
+shared_utils_path = os.path.join(holiday_location, "common")
+sys.path.append(shared_utils_path)
+from get_cached_order_book import get_order_book
+CACHE_FILE = os.path.join(shared_utils_path, "orderbook_cache.json")
+LOCK_FILE = os.path.join(shared_utils_path, "orderbook_cache.lock")
 
 # Configure logging
 logging.basicConfig(
@@ -366,7 +374,7 @@ def cancel_order(order_id):
 def square_off(symbol, token, order_id):
     try:
         time.sleep(1)
-        order_status = smart_api.orderBook()
+        order_status = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)
         sl_hit = any(order.get("orderid") == order_id and order.get("status") == "complete"
                      for order in order_status.get("data", []))
 
@@ -396,7 +404,7 @@ def get_order_entry_price(order_id):
     """Fetch the exact executed price for a specific order ID."""
     try:
         time.sleep(1)
-        all_orders = smart_api.orderBook()  # Get the list of all today's orders
+        all_orders = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)  # Get the list of all today's orders
         if all_orders.get("status"):
             orders = all_orders["data"]
             for order in orders:
@@ -415,8 +423,8 @@ def get_order_entry_price(order_id):
     return None
 
 def is_order_executed(order_id):
-    time.sleep(1)
-    order_details = smart_api.orderBook()
+    #time.sleep(1)
+    order_details = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)
     for order in order_details.get("data", []):
         if order["orderid"] == order_id and order["status"].lower() == "complete":
             return True
@@ -431,7 +439,7 @@ def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
     time.sleep(5)
     pe_order_id = place_market_order(pe_symbol, pe_token)
     #log_and_print(f"OPTION SELLING VIKAS:pe_order_id is {pe_order_id}")
-    
+    time.sleep(5)
     if is_order_executed(ce_order_id) and is_order_executed(pe_order_id):
 
         ce_entry_price = get_order_entry_price(ce_order_id)
@@ -479,7 +487,7 @@ def run_os_strategy():
             log_and_print(f"OPTION SELLING VIKAS:📉 Today is expiry. Quantity set to EXP_QTY: {QTY}")
         else:
             log_and_print(f"OPTION SELLING VIKAS:📈 Today is not expiry. Quantity remains as QTY: {QTY}")
-        wait_until_ist("09:18:55")
+        wait_until_ist("09:18:56")
         atm_strike = get_sensex_atm()
         log_and_print(atm_strike)
         ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
