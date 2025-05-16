@@ -524,9 +524,9 @@ def run_os_strategy():
                         log_and_print(f"OPTION SELLING VIKAS:🚫 Exiting early at {tim}... 4 side SL hit even after re-entry. No more trades.")
                         send_whatsapp_message(f"OPTION SELLING VIKAS:🚫 EARLY EXIT at {tim} -> 4 side SL hit even after re-entry. No more trades.")
                         return
-        if not is_logged_in(refresh_token, smart_api):
-            log_and_print("OPTION SELLING VIKAS:Session expired, re-authenticating before square_off...")
-            smart_api = login()  
+        #if not is_logged_in(refresh_token):
+            #log_and_print("OPTION SELLING VIKAS:Session expired, re-authenticating before square_off...")
+            #login()  
         square_off(ce_symbol, ce_token, ce_sl_order_1043)
         square_off(pe_symbol, pe_token, pe_sl_order_1043)
         if reentered:
