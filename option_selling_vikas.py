@@ -12,6 +12,7 @@ import platform
 import getpass
 from twilio.rest import Client
 import sys
+import calendar
 
 # --------- Account Config ---------
 API_KEY = 'I39xpH90'
@@ -119,16 +120,16 @@ def is_expiry_day():
     expiry_day = get_expiry_day()
     return today.date() == expiry_day.date()
 
-def is_market_holiday():
-    holiday_file = holiday_location + "nifty_expiry_holidays.txt"  
+def is_market_holiday(date_obj):
+    holiday_file = holiday_location + "nifty_expiry_holidays.txt"
     try:
         with open(holiday_file, "r") as f:
             holidays = [line.strip() for line in f.readlines()]
     except FileNotFoundError:
-        log_and_print(f"OPTION SELLING VIKAS:Warning: {holiday_file} not found. Assuming no holidays.")
+        log_and_print(f"OPTION SELLING VIKAS: Warning: {holiday_file} not found. Assuming no holidays.")
         return False
-    today = datetime.today().strftime("%d%b%y")  # Format like 26Feb25
-    return today in holidays
+    date_str = date_obj.strftime("%d%b%y")
+    return date_str in holidays or date_obj.weekday() in [5, 6]
     
 def get_current_ist_time():
     return datetime.now(finland_tz).astimezone(india_tz)
@@ -207,6 +208,21 @@ def get_expiry_day():
             expiry_day -= timedelta(days=1)
     return expiry_day
 
+def get_last_valid_expiry_of_month(expiry):
+    year = expiry.year
+    month = expiry.month
+    last_day = calendar.monthrange(year, month)[1]
+    tuesdays = []
+    for day in range(1, last_day + 1):
+        date_obj = datetime(year, month, day)
+        if date_obj.weekday() == 1:  # Tuesday
+            # Adjust if it's a holiday or weekend
+            while is_market_holiday(date_obj):
+                date_obj -= timedelta(days=1)
+            tuesdays.append(date_obj)
+    unique_expiries = sorted(set(tuesdays))
+    return unique_expiries[-1] if unique_expiries else expiry
+
 def get_nifty_atm():
     spot_data = smart_api.ltpData("NSE", "NIFTY", "26000")
     if spot_data.get("status"):
@@ -223,10 +239,17 @@ def get_sensex_atm():
 
 def build_symbols(atm, expiry):
     yy = expiry.strftime("%y")               # '25'
-    m = str(int(expiry.strftime("%m")))      # '5' (no leading zero)
+    m = str(int(expiry.strftime("%m")))      # '5'
     dd = expiry.strftime("%d")               # '06'
-    strike_str = str(atm)                    # e.g., '82000'
-    base = f"SENSEX{yy}{m}{dd}{strike_str}"
+    strike_str = str(atm)                    # '81300'
+    last_expiry = get_last_valid_expiry_of_month(expiry)
+    if expiry.date() == last_expiry.date():
+        # Monthly format
+        mon_str = expiry.strftime("%b").upper()  # 'MAY'
+        base = f"SENSEX{yy}{mon_str}{strike_str}"
+    else:
+        # Weekly format
+        base = f"SENSEX{yy}{m}{dd}{strike_str}"
     print(f"{base}CE", f"{base}PE")
     return f"{base}CE", f"{base}PE"
     
@@ -487,6 +510,7 @@ def run_os_strategy():
             log_and_print(f"OPTION SELLING VIKAS:📉 Today is expiry. Quantity set to EXP_QTY: {QTY}")
         else:
             log_and_print(f"OPTION SELLING VIKAS:📈 Today is not expiry. Quantity remains as QTY: {QTY}")
+        log_and_print("OPTION SELLING VIKAS:Now we have to wait till 09.18:56 AM")
         wait_until_ist("09:18:56")
         atm_strike = get_sensex_atm()
         log_and_print(atm_strike)
@@ -494,7 +518,6 @@ def run_os_strategy():
         ce_token = get_token(ce_symbol)
         time.sleep(1)
         pe_token = get_token(pe_symbol)
-        log_and_print("OPTION SELLING VIKAS:Now we have to wait till 09.18:55 AM")
         #wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
@@ -543,7 +566,8 @@ def run_os_strategy():
 if __name__ == "__main__":
     try:
         log_and_print(f"OPTION SELLING VIKAS:job is running on {system_platform}")
-        if is_market_holiday():
+        current_date = datetime.today()
+        if is_market_holiday(current_date):
             send_whatsapp_message(f"🔔:Option Selling Vikas: Market holiday on {current_date}. Exiting script.")
             log_and_print("OPTION SELLING VIKAS:Market holiday today. Exiting script.")
         else:
