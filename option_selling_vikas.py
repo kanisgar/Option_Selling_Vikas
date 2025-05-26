@@ -388,6 +388,7 @@ def cancel_order(order_id):
     """Cancel the order by its order ID."""
     try:
         cancel_response = smart_api.cancelOrder(str(order_id), "STOPLOSS")
+        log_and_print(f"OPTION SELLING VIKAS:❌ Trying to cancel order {order_id}")
         return cancel_response
     except Exception as e:
         #send_whatsapp_message(f"❌ DO MANUALLY; Failed to cancel order {order_id}: {e}")
@@ -400,7 +401,7 @@ def square_off(symbol, token, order_id):
         order_status = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)
         sl_hit = any(order.get("orderid") == order_id and order.get("status") == "complete"
                      for order in order_status.get("data", []))
-        log_and_print(f"KANI:The sl_hit for {symbol} and {order_id} is {sl_hit}")
+        log_and_print(f"KANI:The sl_hit for {symbol} token:{token} and {order_id}is {sl_hit}")
         if not sl_hit:
             # Place BUY to square off
             cancel_order(order_id)
