@@ -400,10 +400,11 @@ def square_off(symbol, token, order_id):
         order_status = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)
         sl_hit = any(order.get("orderid") == order_id and order.get("status") == "complete"
                      for order in order_status.get("data", []))
-
+        log_and_print(f"KANI:The sl_hit for {symbol} and {order_id} is {sl_hit}")
         if not sl_hit:
             # Place BUY to square off
             cancel_order(order_id)
+            log_and_print(f"KANI:Looks like we cancelled the order id : {order_id}")
             order = {
                 "variety": "NORMAL",
                 "tradingsymbol": symbol,
@@ -500,6 +501,8 @@ def run_os_strategy():
     try:
         ce_sl_order_1430 = None
         pe_sl_order_1430 = None
+        ce_sl_order_1043 = None
+        pe_sl_order_1043 = None
         reentered = False
         login()
         expiry = get_expiry_day()
@@ -521,7 +524,7 @@ def run_os_strategy():
         #wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
-        while get_current_ist_time().strftime("%H:%M") < "14:59":
+        while get_current_ist_time().strftime("%H:%M") < "14:58":
             tim = get_current_ist_time().strftime("%H:%M")
             time.sleep(30)
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
@@ -549,8 +552,10 @@ def run_os_strategy():
                         return
         #if not is_logged_in(refresh_token):
             #log_and_print("OPTION SELLING VIKAS:Session expired, re-authenticating before square_off...")
-            #login()  
+            #login()
+        log_and_print(f"KANI:Trying to square of CE SL order:f{ce_sl_order_1043}")
         square_off(ce_symbol, ce_token, ce_sl_order_1043)
+        log_and_print(f"KANI:Trying to square of PE SL order:f{pe_sl_order_1043}")
         square_off(pe_symbol, pe_token, pe_sl_order_1043)
         if reentered:
             square_off(ce_symbol, ce_token, ce_sl_order_1430)
