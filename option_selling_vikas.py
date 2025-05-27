@@ -399,8 +399,7 @@ def square_off(symbol, token, order_id):
     try:
         time.sleep(1)
         order_status = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)
-        sl_hit = any(order.get("orderid") == order_id and order.get("status") == "complete"
-                     for order in order_status.get("data", []))
+        sl_hit = is_order_executed(order_id)
         log_and_print(f"KANI:The sl_hit for {symbol} token:{token} and {order_id}is {sl_hit}")
         if not sl_hit:
             # Place BUY to square off
@@ -429,17 +428,19 @@ def get_order_entry_price(order_id):
     """Fetch the exact executed price for a specific order ID."""
     try:
         time.sleep(1)
-        all_orders = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)  # Get the list of all today's orders
+        all_orders = get_order_book(smart_api, CACHE_FILE, LOCK_FILE)  # Get the list of all today's orders
         if all_orders.get("status"):
             orders = all_orders["data"]
             for order in orders:
-                if order.get("orderid") == order_id:
-                    if order.get("orderstatus").lower() == "complete":
+                if str(order.get("orderid")) == str(order_id):
+                    status = order.get("orderstatus", "").strip().lower()
+                    if status == "complete":
                         executed_price = float(order.get("averageprice"))
                         return executed_price
                     else:
                         log_and_print(f"OPTION SELLING VIKAS:⚠️ Order ID {order_id} is not fully complete yet. Status: {order.get('orderstatus')}")
                         return None
+            log_and_print(f"OPTION SELLING VIKAS:⚠️ Order ID {order_id} not found in order book.")
         else:
             log_and_print("OPTION SELLING VIKAS:⚠️ No order data received from orderBook()")
     except Exception as e:
@@ -447,13 +448,20 @@ def get_order_entry_price(order_id):
         send_whatsapp_message(f"❌OPTION SELLING VIKAS: Failed to fetch executed price for order ID {order_id}: {e}")
     return None
 
+
 def is_order_executed(order_id):
-    #time.sleep(1)
-    order_details = get_order_book(smart_api,CACHE_FILE,LOCK_FILE)
-    for order in order_details.get("data", []):
-        if order["orderid"] == order_id and order["status"].lower() == "complete":
-            return True
-    return False
+    try:
+        order_details = get_order_book(smart_api, CACHE_FILE, LOCK_FILE)
+        for order in order_details.get("data", []):
+            if str(order.get("orderid")) == str(order_id):
+                status = order.get("orderstatus", "").strip().lower()
+                log_and_print(f"Found order: {order_id} with status: {status}")
+                return status == "complete"
+        log_and_print(f"Order ID {order_id} not found in order book.")
+        return False
+    except Exception as e:
+        log_and_print(f"Exception in is_order_executed: {e}")
+        return False
 
 
 
@@ -524,6 +532,7 @@ def run_os_strategy():
         pe_token = get_token(pe_symbol)
         #wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
+        log_and_print(f"KANI:The CE sl order id is {ce_sl_order_1043} and PE sl order id is {pe_sl_order_1043}")
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
         while get_current_ist_time().strftime("%H:%M") < "14:58":
             tim = get_current_ist_time().strftime("%H:%M")
