@@ -33,8 +33,8 @@ RISK_1043 = 0.40
 RISK_1113 = 0.34
 producttype="INTRADAY"
 #producttype='CARRYFORWARD"
-QTY = 20  # Adjust based on your margin/lot
-EXP_QTY = 20
+QTY = 60  # Adjust based on your margin/lot
+EXP_QTY = 40
 auto_reentry = True #Make it True incase if no re-entry is required
 # Initialize SmartConnect
 smart_api = SmartConnect(api_key=API_KEY)
@@ -378,11 +378,13 @@ def place_sl_order(symbol, token, sl_price):
             "triggerprice": sl_price,
             "quantity": QTY
         }
-        smart_api.placeOrder(order)
-        log_and_print(f"OPTION SELLING VIKAS:🔐 SL order placed for {symbol} at {sl_price}")
+        order_response = smart_api.placeOrder(order)
+        log_and_print(f"OPTION SELLING VIKAS:🔐 SL order placed for {symbol} at {sl_price} and the SL order number is {order_response}")
+        return order_response
     except Exception as e:
         log_and_print(f"OPTION SELLING VIKAS:❌ SL order failed for {symbol}: {e}")
         send_whatsapp_message(f"❌ OPTION SELLING VIKAS:(PLACE SL QUICKLY) SL order failed for {symbol} and SL PRICE IS : {sl_price} and Exception is: {e}")
+        return None
 
 def cancel_order(order_id):
     """Cancel the order by its order ID."""
@@ -455,12 +457,12 @@ def is_order_executed(order_id):
         for order in order_details.get("data", []):
             if str(order.get("orderid")) == str(order_id):
                 status = order.get("orderstatus", "").strip().lower()
-                log_and_print(f"Found order: {order_id} with status: {status}")
+                log_and_print(f"OPTION SELLING VIKAS: Found order: {order_id} with status: {status}")
                 return status == "complete"
-        log_and_print(f"Order ID {order_id} not found in order book.")
+        log_and_print(f"OPTION SELLING VIKAS: Order ID {order_id} not found in order book.")
         return False
     except Exception as e:
-        log_and_print(f"Exception in is_order_executed: {e}")
+        log_and_print(f"❌OPTION SELLING VIKAS:Exception in is_order_executed: {e}")
         return False
 
 
@@ -534,7 +536,7 @@ def run_os_strategy():
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         log_and_print(f"KANI:The CE sl order id is {ce_sl_order_1043} and PE sl order id is {pe_sl_order_1043}")
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
-        while get_current_ist_time().strftime("%H:%M") < "14:58":
+        while get_current_ist_time().strftime("%H:%M") < "14:59":
             tim = get_current_ist_time().strftime("%H:%M")
             time.sleep(30)
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
