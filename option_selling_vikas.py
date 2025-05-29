@@ -418,7 +418,8 @@ def square_off(symbol, token, order_id):
         if not sl_hit:
             # Place BUY to square off
             cancel_order(order_id)
-            log_and_print(f"KANI:Looks like we cancelled the order id : {order_id}")
+            log_and_print(f"KANI:Looks like we cancelled the order id : {order_id}. Here is the status : {get_order_status_from_book(order_id)}")
+            time.sleep(1)
             order = {
                 "variety": "NORMAL",
                 "tradingsymbol": symbol,
