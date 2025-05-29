@@ -387,15 +387,26 @@ def place_sl_order(symbol, token, sl_price):
         return None
 
 def cancel_order(order_id):
-    """Cancel the order by its order ID."""
-    try:
-        cancel_response = smart_api.cancelOrder(str(order_id), "STOPLOSS")
-        log_and_print(f"OPTION SELLING VIKAS:❌ Trying to cancel order {order_id}")
-        return cancel_response
-    except Exception as e:
-        #send_whatsapp_message(f"❌ DO MANUALLY; Failed to cancel order {order_id}: {e}")
-        log_and_print(f"OPTION SELLING VIKAS:❌ Failed to cancel order {order_id}: {e}")
-        return None
+    """Cancel the order by its order ID with retries and status checking."""
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        log_and_print(f"OPTION SELLING VIKAS:🔁 Attempt {attempt} to cancel order {order_id}")
+        try:
+            cancel_response = smart_api.cancelOrder(str(order_id), "STOPLOSS")
+            log_and_print(f"OPTION SELLING VIKAS:❌ Cancel attempt {attempt} made for order {order_id}")
+        except Exception as e:
+            log_and_print(f"OPTION SELLING VIKAS:⚠️ Attempt {attempt} failed to cancel order {order_id}: {e}")
+            cancel_response = None
+        # Check if cancellation succeeded
+        current_status = get_order_status_from_book(order_id)
+        log_and_print(f"OPTION SELLING VIKAS:📘 Order {order_id} status after attempt {attempt}: {current_status}")
+        if current_status.upper() in ["CANCELLED", "REJECTED", "COMPLETE"]:
+            log_and_print(f"OPTION SELLING VIKAS:✅ Order {order_id} is in final state: {current_status}. Stopping attempts.")
+            return cancel_response
+        # Optional: wait briefly before next retry
+        time.sleep(1)
+    log_and_print(f"OPTION SELLING VIKAS:❌ Failed to cancel order {order_id} after {max_attempts} attempts.")
+    return None
 
 def square_off(symbol, token, order_id):
     try:
@@ -418,8 +429,8 @@ def square_off(symbol, token, order_id):
                 "duration": "DAY",
                 "quantity": QTY
             }
-            smart_api.placeOrder(order)
-            log_and_print(f"OPTION SELLING VIKAS:✅ Squared off {symbol}")
+            square_order = smart_api.placeOrder(order)
+            log_and_print(f"OPTION SELLING VIKAS:✅ Squared off {symbol} and square off status is {get_order_status_from_book(square_order)}")
         else:
             log_and_print(f"OPTION SELLING VIKAS:🛑 SL already hit for {symbol}, skipping square off")
     except Exception as e:
@@ -465,6 +476,22 @@ def is_order_executed(order_id):
         log_and_print(f"❌OPTION SELLING VIKAS:Exception in is_order_executed: {e}")
         return False
 
+def get_order_status_from_book(order_id):
+    """
+    Fetch order status from Angel One order book.
+    Returns the order status as a string or "UNKNOWN" if not found.
+    """
+    try:
+        order_book = get_order_book(smart_api, CACHE_FILE, LOCK_FILE)  # Fetch all orders     
+        if order_book and order_book.get("data"):  # Ensure we have valid data
+            for order in order_book["data"]:  # Loop through orders
+                if str(order.get("orderid")) == str(order_id):
+                    return order.get("status", "UNKNOWN")  # Return status if found                
+        log_and_print(f"⚠️ Order ID {order_id} not found in order book.")
+    except Exception as e:
+        log_and_print(f"❌ Error fetching status for order ID {order_id}: {e}")
+        send_whatsapp_message(f"Error fetching status for order ID {order_id}: {e}")
+    return "UNKNOWN"  # Default if order is not found or exception occurs
 
 
 def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
@@ -545,11 +572,11 @@ def run_os_strategy():
                     if get_current_ist_time().strftime("%H:%M") < "13:00":
                         log_and_print("OPTION SELLING VIKAS:⚠️ Both SL hit, re-entering trade before 13:00...")
                         atm_strike = get_sensex_atm()
-                        ce_symbol, pe_symbol = build_symbols(atm_strike, expiry)
-                        ce_token = get_token(ce_symbol)
+                        ce_symbol_reentry, pe_symbol_reentry = build_symbols(atm_strike, expiry)
+                        ce_token_reentry = get_token(ce_symbol_reentry)
                         time.sleep(1)
-                        pe_token = get_token(pe_symbol)
-                        ce_sl_order_1430, pe_sl_order_1430 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
+                        pe_token_reentry = get_token(pe_symbol_reentry)
+                        ce_sl_order_1430, pe_sl_order_1430 = execute_trade_block(ce_symbol_reentry, pe_symbol_reentry, ce_token_reentry, pe_token_reentry, RISK_1043)
                         reentered = True
                         log_and_print(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY AT {tim}")
                         send_whatsapp_message(f"OPTION SELLING VIKAS: STRATEGY RE-ENTRY PLACED AT {tim}")
@@ -565,13 +592,13 @@ def run_os_strategy():
         #if not is_logged_in(refresh_token):
             #log_and_print("OPTION SELLING VIKAS:Session expired, re-authenticating before square_off...")
             #login()
-        log_and_print(f"KANI:Trying to square of CE SL order:f{ce_sl_order_1043}")
+        log_and_print(f"KANI:Trying to square of CE SL order:{ce_sl_order_1043}")
         square_off(ce_symbol, ce_token, ce_sl_order_1043)
-        log_and_print(f"KANI:Trying to square of PE SL order:f{pe_sl_order_1043}")
+        log_and_print(f"KANI:Trying to square of PE SL order:{pe_sl_order_1043}")
         square_off(pe_symbol, pe_token, pe_sl_order_1043)
         if reentered:
-            square_off(ce_symbol, ce_token, ce_sl_order_1430)
-            square_off(pe_symbol, pe_token, pe_sl_order_1430)        
+            square_off(ce_symbol_reentry, ce_token_reentry, ce_sl_order_1430)
+            square_off(pe_symbol_reentry, pe_token_reentry, pe_sl_order_1430)        
         log_and_print("OPTION SELLING VIKAS:✅ All positions checked and squared off (if needed)")
         send_whatsapp_message("✅Option Selling Vikas: All positions checked and squared off (if needed)")
 
