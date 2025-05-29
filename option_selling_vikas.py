@@ -398,6 +398,7 @@ def cancel_order(order_id):
             log_and_print(f"OPTION SELLING VIKAS:⚠️ Attempt {attempt} failed to cancel order {order_id}: {e}")
             cancel_response = None
         # Check if cancellation succeeded
+        time.sleep(1)
         current_status = get_order_status_from_book(order_id)
         log_and_print(f"OPTION SELLING VIKAS:📘 Order {order_id} status after attempt {attempt}: {current_status}")
         if current_status.upper() in ["CANCELLED", "REJECTED", "COMPLETE"]:
