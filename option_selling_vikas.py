@@ -469,7 +469,6 @@ def is_order_executed(order_id):
         for order in order_details.get("data", []):
             if str(order.get("orderid")) == str(order_id):
                 status = order.get("orderstatus", "").strip().lower()
-                log_and_print(f"OPTION SELLING VIKAS: Found order: {order_id} with status: {status}")
                 return status == "complete"
         log_and_print(f"OPTION SELLING VIKAS: Order ID {order_id} not found in order book.")
         return False
