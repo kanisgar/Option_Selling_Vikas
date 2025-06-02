@@ -323,46 +323,6 @@ def emergency_exit(symbol, token):
             send_whatsapp_message(f"❌ OPTION SELLING VIKAS:Emergency Exit Order failed for {symbol}: {e}")
         return None
 
-#The below method is not in use and it wont work since basket order placing is not available in smart_api Angelone
-def place_basket_order(ce_symbol, ce_token, pe_symbol, pe_token):
-    try:
-        basket_orders = [
-            {
-                "exchange": "BFO",
-                "tradingsymbol": ce_symbol,
-                "symboltoken": ce_token,
-                "transactiontype": "SELL",
-                "ordertype": "MARKET",
-                "producttype": producttype,
-                "duration": "DAY",
-                "price": "0",
-                "triggerprice": "0",
-                "quantity": QTY
-            },
-            {
-                "exchange": "BFO",
-                "tradingsymbol": pe_symbol,
-                "symboltoken": pe_token,
-                "transactiontype": "SELL",
-                "ordertype": "MARKET",
-                "producttype": producttype,
-                "duration": "DAY",
-                "price": "0",
-                "triggerprice": "0",
-                "quantity": QTY
-            }
-        ]
-
-        response = smart_api.placeBasketOrder(basket_orders)
-        log_and_print(f"OPTION SELLING VIKAS:✅ Basket order placed for CE and PE: {response}")
-        send_whatsapp_message(f"OPTION SELLING VIKAS:✅ Basket order placed:\nCE: {ce_symbol}, PE: {pe_symbol}")
-        return response
-
-    except Exception as e:
-        log_and_print(f"OPTION SELLING VIKAS:❌ Basket order placement failed: {e}")
-        send_whatsapp_message(f"OPTION SELLING VIKAS:❌ Basket order failed:\n{e}")
-        return None
-
 def place_sl_order(symbol, token, sl_price):
     try:
         order = {
@@ -431,6 +391,7 @@ def square_off(symbol, token, order_id):
                 "duration": "DAY",
                 "quantity": QTY
             }
+            log_and_print(f"SmartAPI profile at square-off: {smart_api.get_profile()}")
             square_order = smart_api.placeOrder(order)
             log_and_print(f"OPTION SELLING VIKAS:✅ Squared off {symbol} and square off order :{square_order} status is {get_order_status_from_book(square_order)}")
         else:
@@ -467,6 +428,7 @@ def get_order_entry_price(order_id):
 def is_order_executed(order_id):
     try:
         order_details = get_order_book(smart_api, CACHE_FILE, LOCK_FILE)
+        log_and_print(f"OPTION SELLING VIKAS:Checking if Order ID:{order_id} got executed")
         for order in order_details.get("data", []):
             if str(order.get("orderid")) == str(order_id):
                 status = order.get("orderstatus", "").strip().lower()
@@ -571,7 +533,8 @@ def run_os_strategy():
             if is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
                 if not reentered and auto_reentry:
                     if get_current_ist_time().strftime("%H:%M") < "13:00":
-                        log_and_print("OPTION SELLING VIKAS:⚠️ Both SL hit, re-entering trade before 13:00...")
+                        log_and_print("OPTION SELLING VIKAS:⚠️ Both SL hit, Re-logging & re-entering trade before 13:00...")
+                        login()
                         atm_strike = get_sensex_atm()
                         ce_symbol_reentry, pe_symbol_reentry = build_symbols(atm_strike, expiry)
                         ce_token_reentry = get_token(ce_symbol_reentry)
@@ -590,9 +553,8 @@ def run_os_strategy():
                         log_and_print(f"OPTION SELLING VIKAS:🚫 Exiting early at {tim}... 4 side SL hit even after re-entry. No more trades.")
                         send_whatsapp_message(f"OPTION SELLING VIKAS:🚫 EARLY EXIT at {tim} -> 4 side SL hit even after re-entry. No more trades.")
                         return
-        #if not is_logged_in(refresh_token):
-            #log_and_print("OPTION SELLING VIKAS:Session expired, re-authenticating before square_off...")
-            #login()
+        log_and_print("OPTION SELLING VIKAS:Session might have expired, re-logging before square_off...")
+        login()
         log_and_print(f"KANI:Trying to square of CE SL order:{ce_sl_order_1043}")
         square_off(ce_symbol, ce_token, ce_sl_order_1043)
         log_and_print(f"KANI:Trying to square of PE SL order:{pe_sl_order_1043}")
