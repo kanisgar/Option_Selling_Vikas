@@ -391,7 +391,6 @@ def square_off(symbol, token, order_id):
                 "duration": "DAY",
                 "quantity": QTY
             }
-            log_and_print(f"SmartAPI profile at square-off: {smart_api.get_profile()}")
             square_order = smart_api.placeOrder(order)
             log_and_print(f"OPTION SELLING VIKAS:✅ Squared off {symbol} and square off order :{square_order} status is {get_order_status_from_book(square_order)}")
         else:
