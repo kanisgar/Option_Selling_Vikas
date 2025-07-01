@@ -33,8 +33,8 @@ RISK_1043 = 0.40
 RISK_1113 = 0.34
 producttype="INTRADAY"
 #producttype='CARRYFORWARD"
-QTY = 60  # Adjust based on your margin/lot
-EXP_QTY = 40
+QTY = 260  # Adjust based on your margin/lot
+EXP_QTY = 240
 auto_reentry = False #Make it False incase if no re-entry is required
 # Initialize SmartConnect
 smart_api = SmartConnect(api_key=API_KEY)
