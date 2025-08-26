@@ -197,30 +197,31 @@ def get_expiry_day():
     if os.path.exists(holiday_file):
         with open(holiday_file, "r") as file:
             holidays = [line.strip() for line in file.readlines()]
-    if today.weekday() == 1 and today.strftime("%d%b%y") not in holidays:
-        expiry_day = today
-    else:
-        # Find next Tuesday (weekday = 3)
-        days_ahead = (1 - today.weekday() + 7) % 7
-        expiry_day = today + timedelta(days=days_ahead)
-        # Adjust expiry_day if it's a holiday or falls on weekend
-        while expiry_day.strftime("%d%b%y") in holidays or expiry_day.weekday() in [5, 6]:
-            expiry_day -= timedelta(days=1)
+    # Find next Thursday (weekday = 3)
+    days_ahead = (3 - today.weekday() + 7) % 7  # Thursday = 3
+    expiry_day = today + timedelta(days=days_ahead)
+    # Adjust expiry_day if it's a holiday or weekend
+    while expiry_day.strftime("%d%b%y") in holidays or expiry_day.weekday() in [5, 6]:
+        expiry_day -= timedelta(days=1)
+    # Hardcoded skip: if expiry is 28-Aug-2025, replace with 04-Sep-2025
+    if expiry_day.strftime("%d%b%y") == "28Aug25":
+        expiry_day = datetime.strptime("04Sep25", "%d%b%y")
     return expiry_day
 
 def get_last_valid_expiry_of_month(expiry):
     year = expiry.year
     month = expiry.month
     last_day = calendar.monthrange(year, month)[1]
-    tuesdays = []
+    thursdays = []
+    skip_dates = ["28Aug25"]  # Explicitly skip this date
     for day in range(1, last_day + 1):
         date_obj = datetime(year, month, day)
-        if date_obj.weekday() == 1:  # Tuesday
-            # Adjust if it's a holiday or weekend
-            while is_market_holiday(date_obj):
+        if date_obj.weekday() == 3:  # Thursday
+            # Adjust if it's a holiday, weekend, or in skip_dates
+            while is_market_holiday(date_obj) or date_obj.strftime("%d%b%y") in skip_dates or date_obj.weekday() in [5, 6]:
                 date_obj -= timedelta(days=1)
-            tuesdays.append(date_obj)
-    unique_expiries = sorted(set(tuesdays))
+            thursdays.append(date_obj)
+    unique_expiries = sorted(set(thursdays))
     return unique_expiries[-1] if unique_expiries else expiry
 
 def get_nifty_atm():
