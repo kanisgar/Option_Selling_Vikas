@@ -240,17 +240,22 @@ def get_sensex_atm():
 
 def build_symbols(atm, expiry):
     yy = expiry.strftime("%y")               # '25'
-    m = str(int(expiry.strftime("%m")))      # '5'
     dd = expiry.strftime("%d")               # '06'
     strike_str = str(atm)                    # '81300'
     last_expiry = get_last_valid_expiry_of_month(expiry)
+    # AngelOne month code mapping (short form)
+    month_map = {
+        1:"J", 2:"F", 3:"M", 4:"A", 5:"Y", 6:"U",
+        7:"L", 8:"G", 9:"S", 10:"O", 11:"N", 12:"D"
+    }
     if expiry.date() == last_expiry.date():
-        # Monthly format
+        # Monthly format (still 3-letter month string)
         mon_str = expiry.strftime("%b").upper()  # 'MAY'
         base = f"SENSEX{yy}{mon_str}{strike_str}"
     else:
-        # Weekly format
-        base = f"SENSEX{yy}{m}{dd}{strike_str}"
+        # Weekly format → YY + MonthCode + DD
+        month_code = month_map[int(expiry.strftime("%m"))]
+        base = f"SENSEX{yy}{month_code}{dd}{strike_str}"
     print(f"{base}CE", f"{base}PE")
     return f"{base}CE", f"{base}PE"
     
@@ -522,7 +527,6 @@ def run_os_strategy():
         ce_token = get_token(ce_symbol)
         time.sleep(1)
         pe_token = get_token(pe_symbol)
-        #wait_until_ist("09:19")
         ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
         log_and_print(f"KANI:The CE sl order id is {ce_sl_order_1043} and PE sl order id is {pe_sl_order_1043}")
         send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
