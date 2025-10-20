@@ -13,6 +13,7 @@ import getpass
 from twilio.rest import Client
 import sys
 import calendar
+import requests
 
 # --------- Account Config ---------
 API_KEY = 'I39xpH90'
@@ -41,6 +42,13 @@ smart_api = SmartConnect(api_key=API_KEY)
 
 #Intialize Twilio
 client = Client(account_sid, auth_token)
+
+#For Telegram Bot
+BOT_TOKEN = "8313800040:AAFbD8M5e6g8OF2SlGJzgfM9c9oyfZyah6c"
+# List of Telegram Chat IDs (Replace with actual chat IDs of your recipients)
+RECIPIENT_CHAT_IDS = [
+    "632084234",  # Recipient 1
+]
 
 # --------- Timezone Setup ---------
 current_date = datetime.now().strftime("%Y-%m-%d")
@@ -157,11 +165,8 @@ def login():
     except Exception as e:
         log_and_print(f"OPTION SELLING VIKAS:🔒 Inside Login() and exception is {e}")
 
+"""
 def send_whatsapp_message(message_body):
-    """
-    Sends a WhatsApp message using Twilio API.
-    :param message_body: The message content to send.
-    """
     recipients = [
         'whatsapp:+919042528367',  # Recipient 1
         'whatsapp:+918012991200'   # Recipient 2 (add as many as needed)
@@ -176,6 +181,26 @@ def send_whatsapp_message(message_body):
         log_and_print(f"OPTION SELLING VIKAS:WhatsApp Message Sent: {message_body}")
     except Exception as e:
         log_and_print(f"OPTION SELLING VIKAS:Failed to send message: {e}")
+"""
+def send_whatsapp_message(message_body):
+    """
+    Sends a message using Telegram Bot API to multiple recipients.
+    :param message_body: The message content to send.
+    """
+    try:
+        for chat_id in RECIPIENT_CHAT_IDS:
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            payload = {
+                "chat_id": chat_id,
+                "text": message_body
+            }
+            response = requests.post(url, data=payload)
+            if response.status_code == 200:
+                log_and_print(f"Telegram Message Sent to {chat_id}: {message_body}")
+            else:
+                log_and_print(f"Failed to send Telegram message to {chat_id}: {response.text}")
+    except Exception as e:
+        log_and_print(f"Error sending Telegram message: {e}")
 
 def is_logged_in(refresh_token):
     try:
