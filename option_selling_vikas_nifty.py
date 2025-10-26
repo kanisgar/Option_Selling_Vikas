@@ -137,7 +137,7 @@ def is_market_holiday(date_obj):
         log_and_print(f"OPTION SELLING VIKAS NIFTY: Warning: {holiday_file} not found. Assuming no holidays.")
         return False
     date_str = date_obj.strftime("%d%b%y")
-    return date_str in holidays# or date_obj.weekday() in [5, 6]
+    return date_str in holidays or date_obj.weekday() in [5, 6]
     
 def get_current_ist_time():
     return datetime.now(finland_tz).astimezone(india_tz)
@@ -593,7 +593,7 @@ def run_os_strategy():
         else:
             log_and_print(f"OPTION SELLING VIKAS NIFTY:📈 Today is not expiry. Quantity remains as QTY: {QTY}")
         log_and_print("OPTION SELLING VIKAS NIFTY:Now we have to wait till 09.18:56 AM")
-        #wait_until_ist("09:18:56")
+        wait_until_ist("09:18:56")
         #atm_strike = get_sensex_atm()
         atm_strike = get_nifty_atm()
         log_and_print(atm_strike)
