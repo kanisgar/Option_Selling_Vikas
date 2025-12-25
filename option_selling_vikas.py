@@ -542,6 +542,8 @@ def run_os_strategy():
         if is_expiry_day():
             QTY = EXP_QTY
             log_and_print(f"OPTION SELLING VIKAS:📉 Today is expiry. Quantity set to EXP_QTY: {QTY}")
+            log_and_print("Exiting the SENSEX script since today is expiry")
+            sys.exit(0)
         else:
             log_and_print(f"OPTION SELLING VIKAS:📈 Today is not expiry. Quantity remains as QTY: {QTY}")
         log_and_print("OPTION SELLING VIKAS:Now we have to wait till 09.18:56 AM")
