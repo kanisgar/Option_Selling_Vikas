@@ -270,8 +270,8 @@ def build_symbols(atm, expiry):
     last_expiry = get_last_valid_expiry_of_month(expiry)
     # AngelOne month code mapping (short form)
     month_map = {
-        1:"J", 2:"F", 3:"M", 4:"A", 5:"Y", 6:"U",
-        7:"L", 8:"G", 9:"S", 10:"O", 11:"N", 12:"D"
+        1:"1", 2:"2", 3:"3", 4:"4", 5:"5", 6:"6",
+        7:"7", 8:"8", 9:"9", 10:"O", 11:"N", 12:"D"
     }
     if expiry.date() == last_expiry.date():
         # Monthly format (still 3-letter month string)
