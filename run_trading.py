@@ -15,20 +15,20 @@ system_platform = platform.system()
 current_user = getpass.getuser()
 
 if system_platform == "Windows":
-    holiday_location = "C:\\Kani_Personal\\Automate_Trading\\AlgoTrading\\"
+    holiday_location = "C:\\Kani_Personal\\Automate_Trading\\Option_Selling_Vikas\\"
     base_script_path = "C:/Kani_Personal/Automate_Trading/Option_Selling_Vikas"
     log_path = f"C:/Kani_Personal/Automate_Trading/Option_Selling_Vikas/job_logs/job_run_trading_{datetime.now().strftime('%Y-%m-%d')}.txt"
     PYTHON = "python"
 
 elif system_platform == "Darwin":
-    holiday_location = "/Users/kanisgar/Documents/AlgoTrading/"
+    holiday_location = "/Users/kanisgar/Documents/Option_Selling_Vikas/"
     base_script_path = "/Users/kanisgar/Documents/Option_Selling_Vikas"
     log_path = f"/Users/kanisgar/Documents/Option_Selling_Vikas/job_logs/job_run_trading_{datetime.now().strftime('%Y-%m-%d')}.txt"
     PYTHON = "/usr/bin/python3"
 
 elif system_platform == "Linux":
     if current_user == "ec2-user":
-        holiday_location = "/home/ec2-user/AlgoTrading/"
+        holiday_location = "/home/ec2-user/Option_Selling_Vikas/"
         base_script_path = "/home/ec2-user/Option_Selling_Vikas"
         log_path = f"/home/ec2-user/Option_Selling_Vikas/job_logs/job_run_trading_{datetime.now().strftime('%Y-%m-%d')}.txt"
         PYTHON = "/usr/bin/python3"

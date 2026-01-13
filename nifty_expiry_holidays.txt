@@ -1,1 +1,16 @@
-C:/Kani_Personal/Automate_Trading/AlgoTrading/nifty_expiry_holidays.txt
+15Jan26
+26Jan26
+03Mar26
+26Mar26
+31Mar26
+03Apr26
+14Apr26
+01May26
+28May26
+26Jun26
+14Sep26
+02Oct26
+20Oct26
+10Nov26
+24Nov26
+25Dec26
