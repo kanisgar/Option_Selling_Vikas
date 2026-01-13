@@ -60,16 +60,16 @@ current_user = getpass.getuser()
 #holiday_location="C:\Kani_Personal\Automate_Trading\AlgoTrading\\"
 #log_path = f"C:/Kani_Personal/Automate_Trading/AlgoTrading/job_logs/job_optionSellingVikas_{datetime.now().strftime('%Y-%m-%d')}.txt"
 if system_platform == "Windows":
-    holiday_location = "C:\\Kani_Personal\\Automate_Trading\\Option_Selling_Vikas\\"
+    holiday_location = "C:\\Kani_Personal\\Automate_Trading\\AlgoTrading\\"
     log_path = f"C:/Kani_Personal/Automate_Trading/Option_Selling_Vikas/job_logs/job_option_selling_vikas_nifty_{datetime.now().strftime('%Y-%m-%d')}.txt"
 
 elif system_platform == "Darwin":  # Mac
-    holiday_location = "/Users/kanisgar/Documents/Option_Selling_Vikas/"
+    holiday_location = "/Users/kanisgar/Documents/AlgoTrading/"
     log_path = f"/Users/kanisgar/Documents/Option_Selling_Vikas/job_logs/job_option_selling_vikas_nifty_{datetime.now().strftime('%Y-%m-%d')}.txt"
 
 elif system_platform == "Linux":
     if current_user == "ec2-user":
-        holiday_location = "/home/ec2-user/Option_Selling_Vikas/"
+        holiday_location = "/home/ec2-user/AlgoTrading/"
         log_path = f"/home/ec2-user/Option_Selling_Vikas/job_logs/job_option_selling_vikas_nifty_{datetime.now().strftime('%Y-%m-%d')}.txt"
         should_stop_ec2_on_exit = False
 os.makedirs(os.path.dirname(log_path), exist_ok=True)
