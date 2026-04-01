@@ -31,7 +31,7 @@ auth_token = '06c408e1a82a20ae2b839f2cceac4705'  # Replace with actual token
 
 # --------- Risk Config ---------
 RISK_1043 = 0.30
-RISK_1113 = 0.34
+RISK_1113 = 0.40
 producttype="INTRADAY"
 #producttype='CARRYFORWARD"
 QTY = 140 #7 Lots , 220 -> 11 lots
@@ -487,7 +487,7 @@ def get_order_status_from_book(order_id):
     return "UNKNOWN"  # Default if order is not found or exception occurs
 
 
-def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
+def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct, risk_pct_40):
 
     ce_order_id = place_market_order(ce_symbol, ce_token)
     #log_and_print(f"OPTION SELLING VIKAS:ce_order_id is {ce_order_id}")
@@ -506,11 +506,13 @@ def execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, risk_pct):
         
         ce_sl = round(ce_entry_price * (1 + risk_pct), 1)
         pe_sl = round(pe_entry_price * (1 + risk_pct), 1)
+        ce_sl_40 = round(ce_entry_price * (1 + risk_pct_40), 1)
+        pe_sl_40 = round(pe_entry_price * (1 + risk_pct_40), 1)
         
         ce_sl_order_id = place_sl_order(ce_symbol, ce_token, ce_sl)
         pe_sl_order_id = place_sl_order(pe_symbol, pe_token, pe_sl)
         
-        return ce_sl_order_id, pe_sl_order_id
+        return ce_sl_order_id, pe_sl_order_id, ce_entry_price, pe_entry_price, ce_sl_40, pe_sl_40
     
     else:
         if ce_order_id:
@@ -534,6 +536,12 @@ def run_os_strategy():
         pe_sl_order_1430 = None
         ce_sl_order_1043 = None
         pe_sl_order_1043 = None
+        ce_entry_price = None
+        pe_entry_price = None
+        ce_sl_40 = None
+        pe_sl_40 = None
+        ce_updated = False
+        pe_updated = False
         reentered = False
         login()
         expiry = get_expiry_day()
@@ -554,13 +562,37 @@ def run_os_strategy():
         ce_token = get_token(ce_symbol)
         time.sleep(1)
         pe_token = get_token(pe_symbol)
-        ce_sl_order_1043, pe_sl_order_1043 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043)
+        #ce_sl_order_id, pe_sl_order_id, ce_entry_price, pe_entry_price, ce_sl_40, pe_sl_40
+        ce_sl_order_1043, pe_sl_order_1043, ce_entry_price, pe_entry_price, ce_sl_40, pe_sl_40 = execute_trade_block(ce_symbol, pe_symbol, ce_token, pe_token, RISK_1043, RISK_1113)
         log_and_print(f"KANI:The CE sl order id is {ce_sl_order_1043} and PE sl order id is {pe_sl_order_1043}")
-        send_whatsapp_message("OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE")
+        send_whatsapp_message(f"OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE. 40% CE SL is {ce_sl_40} and 40% PE SL is {pe_sl_40}")
         while get_current_ist_time().strftime("%H:%M") < "14:59":
             tim = get_current_ist_time().strftime("%H:%M")
-            time.sleep(30)
+            #time.sleep(30)
+            ce_ltp = get_ltp(ce_symbol,ce_token)
+            time.sleep(1)
+            pe_ltp = get_ltp(pe_symbol,pe_token)
+            
+            if not ce_updated and ce_ltp >= ce_entry_price * 1.20:
+                log_and_print("🚀 CE crossed 20% → upgrading CE SL 30% → 40%")
+                cancel_order(ce_sl_order_1043)
+                time.sleep(1)
+                ce_sl_order_1043 = place_sl_order(ce_symbol,ce_token,ce_sl_40)
+                log_and_print(f"KANI:The CE sl order id is modified {ce_sl_order_1043}")
+                ce_updated = True
+                send_whatsapp_message("OPTION SELLING VIKAS NIFTY: CE SL ORDER ID MODIFIED to 40% . PLEASE VERIFY")
+            
+            if not pe_updated and pe_ltp >= pe_entry_price * 1.20:
+                log_and_print("🚀 PE crossed 20% → upgrading CE SL 30% → 40%")
+                cancel_order(pe_sl_order_1043)
+                time.sleep(1)
+                pe_sl_order_1043 = place_sl_order(pe_symbol,pe_token,pe_sl_40)
+                log_and_print(f"KANI:The CE sl order id is modified {pe_sl_order_1043}")
+                pe_updated = True
+                send_whatsapp_message("OPTION SELLING VIKAS NIFTY: PE SL ORDER ID MODIFIED to 40% . PLEASE VERIFY")
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
+            #if ce_updated or pe_updated:
+                #time.sleep(30)
             if is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
                 if not reentered and auto_reentry:
                     if get_current_ist_time().strftime("%H:%M") < "13:00":
