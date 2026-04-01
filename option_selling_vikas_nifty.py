@@ -16,7 +16,7 @@ import calendar
 import requests
 
 # --------- Account Config ---------
-API_KEY = 'I39xpH90'
+API_KEY = 'xgMtWyMS'
 CLIENT_CODE = 'AAAI570791'
 PASSWORD = '1611'
 TOTP_SECRET = 'ZXI5JF7SKHJND6W2XCBHYPLEJU'
@@ -30,7 +30,7 @@ account_sid = 'AC6ef902b81d63731c13b746613aadb2aa'
 auth_token = '06c408e1a82a20ae2b839f2cceac4705'  # Replace with actual token
 
 # --------- Risk Config ---------
-RISK_1043 = 0.40
+RISK_1043 = 0.30
 RISK_1113 = 0.34
 producttype="INTRADAY"
 #producttype='CARRYFORWARD"
