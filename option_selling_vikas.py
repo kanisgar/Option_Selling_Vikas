@@ -543,6 +543,7 @@ def run_os_strategy():
         ce_updated = False
         pe_updated = False
         reentered = False
+        ltp_miss_count = 0
         login()
         expiry = get_expiry_day()
         log_and_print(expiry)
@@ -568,11 +569,24 @@ def run_os_strategy():
         send_whatsapp_message(f"OPTION SELLING VIKAS: STRATEGY ORDER PLACED ALONG WITH SL. PLEASE CHECK ONCE MANUALLY IF SL ORDER IS IN PENDING STATE. 40% CE SL is {ce_sl_40} and 40% PE SL is {pe_sl_40}")
         while get_current_ist_time().strftime("%H:%M") < "14:59":
             tim = get_current_ist_time().strftime("%H:%M")
-            #time.sleep(30)
-            ce_ltp = get_ltp(ce_symbol,ce_token)
+            time.sleep(3)
+            if not ce_updated:
+                ce_ltp = get_ltp(ce_symbol,ce_token)
             time.sleep(1)
-            pe_ltp = get_ltp(pe_symbol,pe_token)
+            if not pe_updated:
+                pe_ltp = get_ltp(pe_symbol,pe_token)
             
+            if (not ce_updated and ce_ltp is None) or (not pe_updated and pe_ltp is None):
+                ltp_miss_count += 1
+                log_and_print(f"⚠️ LTP missing continuously: {ltp_miss_count}")
+                if ltp_miss_count >= 7:
+                   log_and_print("❌ LTP missing 5 continuous times. Possible issue.")
+                   send_whatsapp_message("❌ LTP missing continuously. Check system!")
+                   ltp_miss_count = 0
+                   
+                time.sleep(2)
+                continue
+                
             if not ce_updated and ce_ltp >= ce_entry_price * 1.20:
                 log_and_print("🚀 CE crossed 20% → upgrading CE SL 30% → 40%")
                 cancel_order(ce_sl_order_1043)
@@ -583,11 +597,11 @@ def run_os_strategy():
                 send_whatsapp_message("OPTION SELLING VIKAS NIFTY: CE SL ORDER ID MODIFIED to 40% . PLEASE VERIFY")
             
             if not pe_updated and pe_ltp >= pe_entry_price * 1.20:
-                log_and_print("🚀 PE crossed 20% → upgrading CE SL 30% → 40%")
+                log_and_print("🚀 PE crossed 20% → upgrading PE SL 30% → 40%")
                 cancel_order(pe_sl_order_1043)
                 time.sleep(1)
                 pe_sl_order_1043 = place_sl_order(pe_symbol,pe_token,pe_sl_40)
-                log_and_print(f"KANI:The CE sl order id is modified {pe_sl_order_1043}")
+                log_and_print(f"KANI:The PE sl order id is modified {pe_sl_order_1043}")
                 pe_updated = True
                 send_whatsapp_message("OPTION SELLING VIKAS NIFTY: PE SL ORDER ID MODIFIED to 40% . PLEASE VERIFY")
             #RE-ENTER THE TRADE IF BOTH SIDE SL HIT
