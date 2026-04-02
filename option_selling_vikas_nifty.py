@@ -645,10 +645,10 @@ def run_os_strategy():
                 send_whatsapp_message("OPTION SELLING VIKAS NIFTY: CE SL ORDER ID MODIFIED to 40% . PLEASE VERIFY")
             
             if not pe_updated and pe_ltp >= pe_entry_price * 1.20:
-                log_and_print("🚀 PE crossed 20% → upgrading CE SL 30% → 40%")
+                log_and_print("🚀 PE crossed 20% → upgrading PE SL 30% → 40%")
                 cancel_order(pe_sl_order_1043)
                 pe_sl_order_1043 = place_sl_order(pe_symbol,pe_token,pe_sl_40)
-                log_and_print(f"KANI:The CE sl order id is modified {pe_sl_order_1043}")
+                log_and_print(f"KANI:The PE sl order id is modified {pe_sl_order_1043}")
                 pe_updated = True
                 send_whatsapp_message("OPTION SELLING VIKAS NIFTY: PE SL ORDER ID MODIFIED to 40% . PLEASE VERIFY")
             
