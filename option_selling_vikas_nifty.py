@@ -216,52 +216,46 @@ def get_nifty_spot():
 
 def get_915_candle_nifty():
     """
-    Fetch 9:15 candle OHLC for Nifty from NSE public chart API.
-    Uses same NSE session as VIX fetch — reliable, no AngelOne token needed.
+    Fetch 9:15 candle OHLC for Nifty from Yahoo Finance (^NSEI).
+    Free, no auth, no static IP needed, works during and after market hours.
     Call at 9:25 AM so the 9:15 candle is fully formed.
     """
     try:
-        session = requests.Session()
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept":     "application/json",
-            "Referer":    "https://www.nseindia.com"
-        }
-        session.get("https://www.nseindia.com", headers=headers, timeout=8)
-        resp = session.get(
-            "https://www.nseindia.com/api/chart-databyindex?index=NIFTY 50&indices=true",
-            headers=headers, timeout=8
+        resp = requests.get(
+            "https://query1.finance.yahoo.com/v8/finance/chart/%5ENSEI?interval=5m&range=1d",
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=8
         )
         resp.raise_for_status()
-        data  = resp.json()
-        graph = data.get("grapData") or data.get("graphData") or []
-        if not graph:
-            log_and_print("NIFTY: 9:15 candle — empty graph data from NSE")
+        result = resp.json().get("chart", {}).get("result", [])
+        if not result:
+            log_and_print("NIFTY: 9:15 candle — no chart result from Yahoo")
             return None
 
-        # Filter price points between 09:15 and 09:19 IST
-        candle_points = []
-        for point in graph:
-            ts_ms = point[0]
-            price = float(point[1])
-            dt    = datetime.fromtimestamp(ts_ms / 1000, tz=india_tz)
-            if "09:15" <= dt.strftime("%H:%M") <= "09:19":
-                candle_points.append(price)
+        timestamps = result[0].get("timestamp", [])
+        quote      = result[0]["indicators"]["quote"][0]
+        opens      = quote.get("open",  [])
+        highs      = quote.get("high",  [])
+        lows       = quote.get("low",   [])
+        closes     = quote.get("close", [])
 
-        if not candle_points:
-            # Fallback: use very first available point
-            log_and_print("NIFTY: 9:15 candle — no 09:15-09:19 points, using first available")
-            first = float(graph[0][1])
-            return {"open": first, "high": first, "low": first, "close": first}
+        for i, ts in enumerate(timestamps):
+            dt = datetime.fromtimestamp(ts, tz=india_tz)
+            if dt.strftime("%H:%M") == "09:15" and opens[i] is not None:
+                candle = {
+                    "open":  round(opens[i],  2),
+                    "high":  round(highs[i],  2),
+                    "low":   round(lows[i],   2),
+                    "close": round(closes[i], 2),
+                }
+                log_and_print(
+                    f"NIFTY: 9:15 candle → "
+                    f"O={candle['open']} H={candle['high']} "
+                    f"L={candle['low']} C={candle['close']}"
+                )
+                return candle
 
-        result = {
-            "open":  candle_points[0],
-            "high":  max(candle_points),
-            "low":   min(candle_points),
-            "close": candle_points[-1]
-        }
-        log_and_print(f"NIFTY: 9:15 candle → O={result['open']} H={result['high']} L={result['low']}")
-        return result
+        log_and_print("NIFTY: 9:15 candle — 09:15 slot not found in Yahoo data")
+        return None
 
     except Exception as e:
         log_and_print(f"NIFTY: 9:15 candle fetch failed: {e}")

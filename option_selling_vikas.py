@@ -216,56 +216,46 @@ def get_sensex_spot():
 
 def get_915_candle_sensex():
     """
-    Fetch 9:15 candle OHLC for Sensex from BSE public API.
-    Does not use AngelOne getCandleData — that token is unreliable.
+    Fetch 9:15 candle OHLC for Sensex from Yahoo Finance (^BSESN).
+    Free, no auth, no static IP needed, works during and after market hours.
     Call at 9:25 AM so the 9:15 candle is fully formed.
     """
     try:
-        session = requests.Session()
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept":     "application/json",
-            "Referer":    "https://www.bseindia.com"
-        }
-        session.get("https://www.bseindia.com", headers=headers, timeout=8)
-        resp = session.get(
-            "https://api.bseindia.com/BseIndiaAPI/api/GetSensexData/w",
-            headers=headers, timeout=8
+        resp = requests.get(
+            "https://query1.finance.yahoo.com/v8/finance/chart/%5EBSESN?interval=5m&range=1d",
+            headers={"User-Agent": "Mozilla/5.0"}, timeout=8
         )
         resp.raise_for_status()
-        data  = resp.json()
-        items = data if isinstance(data, list) else data.get("Data", [])
-        if not items:
-            log_and_print("SENSEX: 9:15 candle — empty data from BSE")
+        result = resp.json().get("chart", {}).get("result", [])
+        if not result:
+            log_and_print("SENSEX: 9:15 candle — no chart result from Yahoo")
             return None
 
-        # Filter price points between 09:15 and 09:19
-        candle_points = []
-        for item in items:
-            time_str = str(item.get("dttm", "")).strip()[:5]
-            if "09:15" <= time_str <= "09:19":
-                try:
-                    candle_points.append(float(str(item.get("val", 0)).replace(",", "")))
-                except:
-                    pass
+        timestamps = result[0].get("timestamp", [])
+        quote      = result[0]["indicators"]["quote"][0]
+        opens      = quote.get("open",  [])
+        highs      = quote.get("high",  [])
+        lows       = quote.get("low",   [])
+        closes     = quote.get("close", [])
 
-        if not candle_points:
-            # Fallback: use first available point
-            log_and_print("SENSEX: 9:15 candle — no 09:15-09:19 points, using first available")
-            try:
-                first = float(str(items[0].get("val", 0)).replace(",", ""))
-                return {"open": first, "high": first, "low": first, "close": first}
-            except:
-                return None
+        for i, ts in enumerate(timestamps):
+            dt = datetime.fromtimestamp(ts, tz=india_tz)
+            if dt.strftime("%H:%M") == "09:15" and opens[i] is not None:
+                candle = {
+                    "open":  round(opens[i],  2),
+                    "high":  round(highs[i],  2),
+                    "low":   round(lows[i],   2),
+                    "close": round(closes[i], 2),
+                }
+                log_and_print(
+                    f"SENSEX: 9:15 candle → "
+                    f"O={candle['open']} H={candle['high']} "
+                    f"L={candle['low']} C={candle['close']}"
+                )
+                return candle
 
-        result = {
-            "open":  candle_points[0],
-            "high":  max(candle_points),
-            "low":   min(candle_points),
-            "close": candle_points[-1]
-        }
-        log_and_print(f"SENSEX: 9:15 candle → O={result['open']} H={result['high']} L={result['low']}")
-        return result
+        log_and_print("SENSEX: 9:15 candle — 09:15 slot not found in Yahoo data")
+        return None
 
     except Exception as e:
         log_and_print(f"SENSEX: 9:15 candle fetch failed: {e}")
