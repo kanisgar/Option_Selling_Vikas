@@ -215,20 +215,54 @@ def get_nifty_spot():
 
 
 def get_915_candle_nifty():
+    """
+    Fetch 9:15 candle OHLC for Nifty from NSE public chart API.
+    Uses same NSE session as VIX fetch — reliable, no AngelOne token needed.
+    Call at 9:25 AM so the 9:15 candle is fully formed.
+    """
     try:
-        today_str = datetime.today().strftime("%Y-%m-%d")
-        resp = smart_api.getCandleData({
-            "exchange":    "NSE",
-            "symboltoken": "26000",
-            "interval":    "FIVE_MINUTE",
-            "fromdate":    f"{today_str} 09:15",
-            "todate":      f"{today_str} 09:21"
-        })
-        candles = resp.get("data", [])
-        if candles:
-            c = candles[0]
-            return {"open": float(c[1]), "high": float(c[2]),
-                    "low":  float(c[3]), "close": float(c[4])}
+        session = requests.Session()
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept":     "application/json",
+            "Referer":    "https://www.nseindia.com"
+        }
+        session.get("https://www.nseindia.com", headers=headers, timeout=8)
+        resp = session.get(
+            "https://www.nseindia.com/api/chart-databyindex?index=NIFTY 50&indices=true",
+            headers=headers, timeout=8
+        )
+        resp.raise_for_status()
+        data  = resp.json()
+        graph = data.get("grapData") or data.get("graphData") or []
+        if not graph:
+            log_and_print("NIFTY: 9:15 candle — empty graph data from NSE")
+            return None
+
+        # Filter price points between 09:15 and 09:19 IST
+        candle_points = []
+        for point in graph:
+            ts_ms = point[0]
+            price = float(point[1])
+            dt    = datetime.fromtimestamp(ts_ms / 1000, tz=india_tz)
+            if "09:15" <= dt.strftime("%H:%M") <= "09:19":
+                candle_points.append(price)
+
+        if not candle_points:
+            # Fallback: use very first available point
+            log_and_print("NIFTY: 9:15 candle — no 09:15-09:19 points, using first available")
+            first = float(graph[0][1])
+            return {"open": first, "high": first, "low": first, "close": first}
+
+        result = {
+            "open":  candle_points[0],
+            "high":  max(candle_points),
+            "low":   min(candle_points),
+            "close": candle_points[-1]
+        }
+        log_and_print(f"NIFTY: 9:15 candle → O={result['open']} H={result['high']} L={result['low']}")
+        return result
+
     except Exception as e:
         log_and_print(f"NIFTY: 9:15 candle fetch failed: {e}")
     return None
