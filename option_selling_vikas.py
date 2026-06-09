@@ -569,6 +569,21 @@ def run_os_strategy():
                     log_and_print("SENSEX:❌ LTP missing 7 times.")
                     send_telegram("SENSEX:❌ LTP missing continuously. Check system!")
                     ltp_miss_count = 0
+                # Capture candle even if LTP is missing — independent of LTP
+                if not first_candle_done and tim >= "09:25":
+                    try:
+                        candle = get_915_candle_sensex()
+                        if candle:
+                            trade_logger.log_first_candle(
+                                open_=candle["open"],
+                                high=candle["high"],
+                                low=candle["low"]
+                            )
+                        else:
+                            log_and_print("SENSEX: 9:15 candle returned None, skipping")
+                    except Exception as e:
+                        log_and_print(f"SENSEX: First candle capture failed: {e}")
+                    first_candle_done = True
                 time.sleep(2)
                 continue
 
