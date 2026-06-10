@@ -561,39 +561,37 @@ def run_os_strategy():
                     log_and_print("NIFTY:❌ LTP missing 7 times.")
                     send_telegram("NIFTY:❌ LTP missing continuously. Check system!")
                     ltp_miss_count = 0
-                # First candle capture disabled — enable later when stable
-                # if not first_candle_done and tim >= "09:25":
-                #     try:
-                #         candle = get_915_candle_nifty()
-                #         if candle:
-                #             trade_logger.log_first_candle(
-                #                 open_=candle["open"],
-                #                 high=candle["high"],
-                #                 low=candle["low"]
-                #             )
-                #         else:
-                #             log_and_print("NIFTY: 9:15 candle returned None, skipping")
-                #     except Exception as e:
-                #         log_and_print(f"NIFTY: First candle capture failed: {e}")
-                #     first_candle_done = True
+                if not first_candle_done and tim >= "09:25":
+                    try:
+                        candle = get_915_candle_nifty()
+                        if candle:
+                            trade_logger.log_first_candle(
+                                open_=candle["open"],
+                                high=candle["high"],
+                                low=candle["low"]
+                            )
+                        else:
+                            log_and_print("NIFTY: 9:15 candle returned None, skipping")
+                    except Exception as e:
+                        log_and_print(f"NIFTY: First candle capture failed: {e}")
+                    first_candle_done = True
                 time.sleep(2)
                 continue
 
-            # First candle capture disabled — enable later when stable
-            # if not first_candle_done and tim >= "09:25":
-            #     try:
-            #         candle = get_915_candle_nifty()
-            #         if candle:
-            #             trade_logger.log_first_candle(
-            #                 open_=candle["open"],
-            #                 high=candle["high"],
-            #                 low=candle["low"]
-            #             )
-            #         else:
-            #             log_and_print("NIFTY: 9:15 candle returned None, skipping")
-            #     except Exception as e:
-            #         log_and_print(f"NIFTY: First candle capture failed: {e}")
-            #     first_candle_done = True
+            if not first_candle_done and tim >= "09:25":
+                try:
+                    candle = get_915_candle_nifty()
+                    if candle:
+                        trade_logger.log_first_candle(
+                            open_=candle["open"],
+                            high=candle["high"],
+                            low=candle["low"]
+                        )
+                    else:
+                        log_and_print("NIFTY: 9:15 candle returned None, skipping")
+                except Exception as e:
+                    log_and_print(f"NIFTY: First candle capture failed: {e}")
+                first_candle_done = True
 
             # CE SL hit detection — catch the exact moment it executes
             if not ce_sl_logged and ce_sl_order_1043 and is_order_executed(ce_sl_order_1043):
