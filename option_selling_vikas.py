@@ -569,73 +569,101 @@ def run_os_strategy():
                     log_and_print("SENSEX:❌ LTP missing 7 times.")
                     send_telegram("SENSEX:❌ LTP missing continuously. Check system!")
                     ltp_miss_count = 0
-                # Capture candle even if LTP is missing — independent of LTP
-                if not first_candle_done and tim >= "09:25":
-                    try:
-                        candle = get_915_candle_sensex()
-                        if candle:
-                            trade_logger.log_first_candle(
-                                open_=candle["open"],
-                                high=candle["high"],
-                                low=candle["low"]
-                            )
-                        else:
-                            log_and_print("SENSEX: 9:15 candle returned None, skipping")
-                    except Exception as e:
-                        log_and_print(f"SENSEX: First candle capture failed: {e}")
-                    first_candle_done = True
+                # First candle capture disabled — enable later when stable
+                # if not first_candle_done and tim >= "09:25":
+                #     try:
+                #         candle = get_915_candle_sensex()
+                #         if candle:
+                #             trade_logger.log_first_candle(
+                #                 open_=candle["open"],
+                #                 high=candle["high"],
+                #                 low=candle["low"]
+                #             )
+                #         else:
+                #             log_and_print("SENSEX: 9:15 candle returned None, skipping")
+                #     except Exception as e:
+                #         log_and_print(f"SENSEX: First candle capture failed: {e}")
+                #     first_candle_done = True
                 time.sleep(2)
                 continue
 
-            # Capture real 9:15 candle OHLC once after 9:25
-            if not first_candle_done and tim >= "09:25":
-                try:
-                    candle = get_915_candle_sensex()
-                    if candle:
-                        trade_logger.log_first_candle(
-                            open_=candle["open"],
-                            high=candle["high"],
-                            low=candle["low"]
-                        )
-                    else:
-                        log_and_print("SENSEX: 9:15 candle returned None, skipping")
-                except Exception as e:
-                    log_and_print(f"SENSEX: First candle capture failed: {e}")
-                first_candle_done = True
+            # First candle capture disabled — enable later when stable
+            # if not first_candle_done and tim >= "09:25":
+            #     try:
+            #         candle = get_915_candle_sensex()
+            #         if candle:
+            #             trade_logger.log_first_candle(
+            #                 open_=candle["open"],
+            #                 high=candle["high"],
+            #                 low=candle["low"]
+            #             )
+            #         else:
+            #             log_and_print("SENSEX: 9:15 candle returned None, skipping")
+            #     except Exception as e:
+            #         log_and_print(f"SENSEX: First candle capture failed: {e}")
+            #     first_candle_done = True
 
             # CE SL hit detection — catch the exact moment it executes
             if not ce_sl_logged and ce_sl_order_1043 and is_order_executed(ce_sl_order_1043):
                 trade_logger.log_sl_hit("CE")
                 ce_sl_logged = True
+                ce_updated   = True   # prevent upgrade block from firing after SL already hit
                 log_and_print(f"SENSEX: CE SL hit detected at {tim}")
 
             # PE SL hit detection — catch the exact moment it executes
             if not pe_sl_logged and pe_sl_order_1043 and is_order_executed(pe_sl_order_1043):
                 trade_logger.log_sl_hit("PE")
                 pe_sl_logged = True
+                pe_updated   = True   # prevent upgrade block from firing after SL already hit
                 log_and_print(f"SENSEX: PE SL hit detected at {tim}")
 
             # CE premium crossed +20% → upgrade SL from 30% to 40%
             if not ce_updated and ce_ltp >= ce_entry_price * 1.20:
-                log_and_print("SENSEX:🚀 CE +20% → upgrade SL to 40%")
-                cancel_order(ce_sl_order_1043)
-                time.sleep(1)
-                ce_sl_order_1043 = place_sl_order(ce_symbol, ce_token, ce_sl_40)
-                log_and_print(f"SENSEX: CE SL modified → {ce_sl_order_1043}")
-                ce_updated = True
-                trade_logger.log_sl_upgrade("CE")
-                send_telegram("SENSEX: CE SL upgraded to 40%. PLEASE VERIFY.")
+                log_and_print("SENSEX:🚀 CE +20% → attempting SL upgrade to 40%")
+                # Check if 30% SL already hit before we can cancel
+                if is_order_executed(ce_sl_order_1043):
+                    log_and_print("SENSEX:⚠️ CE 30% SL already executed — skipping upgrade, position closed")
+                    ce_updated = True
+                    ce_sl_logged = True
+                    trade_logger.log_sl_hit("CE")
+                    send_telegram("SENSEX:⚠️ CE 30% SL hit before upgrade could happen. Position closed at 30%.")
+                else:
+                    cancel_order(ce_sl_order_1043)
+                    time.sleep(1)
+                    new_ce_sl_order = place_sl_order(ce_symbol, ce_token, ce_sl_40)
+                    if new_ce_sl_order:
+                        ce_sl_order_1043 = new_ce_sl_order
+                        log_and_print(f"SENSEX: CE SL upgraded → new order {ce_sl_order_1043}")
+                        send_telegram("SENSEX: CE SL upgraded to 40%. PLEASE VERIFY.")
+                    else:
+                        log_and_print("SENSEX:❌ CE 40% SL placement FAILED — no active SL on CE!")
+                        send_telegram("SENSEX:❌ CE 40% SL placement FAILED. PLACE MANUALLY IMMEDIATELY!")
+                    ce_updated = True
+                    trade_logger.log_sl_upgrade("CE")
 
             # PE premium crossed +20% → upgrade SL from 30% to 40%
             if not pe_updated and pe_ltp >= pe_entry_price * 1.20:
-                log_and_print("SENSEX:🚀 PE +20% → upgrade SL to 40%")
-                cancel_order(pe_sl_order_1043)
-                time.sleep(1)
-                pe_sl_order_1043 = place_sl_order(pe_symbol, pe_token, pe_sl_40)
-                log_and_print(f"SENSEX: PE SL modified → {pe_sl_order_1043}")
-                pe_updated = True
-                trade_logger.log_sl_upgrade("PE")
-                send_telegram("SENSEX: PE SL upgraded to 40%. PLEASE VERIFY.")
+                log_and_print("SENSEX:🚀 PE +20% → attempting SL upgrade to 40%")
+                # Check if 30% SL already hit before we can cancel
+                if is_order_executed(pe_sl_order_1043):
+                    log_and_print("SENSEX:⚠️ PE 30% SL already executed — skipping upgrade, position closed")
+                    pe_updated = True
+                    pe_sl_logged = True
+                    trade_logger.log_sl_hit("PE")
+                    send_telegram("SENSEX:⚠️ PE 30% SL hit before upgrade could happen. Position closed at 30%.")
+                else:
+                    cancel_order(pe_sl_order_1043)
+                    time.sleep(1)
+                    new_pe_sl_order = place_sl_order(pe_symbol, pe_token, pe_sl_40)
+                    if new_pe_sl_order:
+                        pe_sl_order_1043 = new_pe_sl_order
+                        log_and_print(f"SENSEX: PE SL upgraded → new order {pe_sl_order_1043}")
+                        send_telegram("SENSEX: PE SL upgraded to 40%. PLEASE VERIFY.")
+                    else:
+                        log_and_print("SENSEX:❌ PE 40% SL placement FAILED — no active SL on PE!")
+                        send_telegram("SENSEX:❌ PE 40% SL placement FAILED. PLACE MANUALLY IMMEDIATELY!")
+                    pe_updated = True
+                    trade_logger.log_sl_upgrade("PE")
 
             # Both SL hit check
             if is_order_executed(ce_sl_order_1043) and is_order_executed(pe_sl_order_1043):
@@ -675,15 +703,24 @@ def run_os_strategy():
         log_and_print("SENSEX: Re-logging before square off...")
         login()
 
-        ce_final_hit = is_order_executed(ce_sl_order_1043)
-        pe_final_hit = is_order_executed(pe_sl_order_1043)
+        ce_final_hit = ce_sl_logged  # use tracked flag — order ID may have changed if upgrade happened
+        pe_final_hit = pe_sl_logged
         trade_logger.log_eod(
             ce_sl_hit=ce_final_hit, pe_sl_hit=pe_final_hit,
             notes="Normal exit at 14:59"
         )
 
-        square_off(ce_symbol, ce_token, ce_sl_order_1043)
-        square_off(pe_symbol, pe_token, pe_sl_order_1043)
+        # ce_sl_logged = True means CE position already closed by SL — do NOT square off
+        # ce_sl_logged = False means CE still open — square off normally
+        if not ce_sl_logged:
+            square_off(ce_symbol, ce_token, ce_sl_order_1043)
+        else:
+            log_and_print("SENSEX: CE already closed by SL hit — skipping square off")
+
+        if not pe_sl_logged:
+            square_off(pe_symbol, pe_token, pe_sl_order_1043)
+        else:
+            log_and_print("SENSEX: PE already closed by SL hit — skipping square off")
         if reentered:
             square_off(ce_symbol_reentry, ce_token_reentry, ce_sl_order_1430)
             square_off(pe_symbol_reentry, pe_token_reentry, pe_sl_order_1430)
