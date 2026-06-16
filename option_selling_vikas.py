@@ -16,16 +16,19 @@ import calendar
 import requests
 
 # --------- Account Config ---------
-API_KEY     = 'xgMtWyMS'
-CLIENT_CODE = 'AAAI570791'
-PASSWORD    = '1611'
-TOTP_SECRET = 'ZXI5JF7SKHJND6W2XCBHYPLEJU'
-refresh_token = None
+def get_secrets():
+    client = boto3.client('secretsmanager', region_name='ap-south-1')
+    secret = client.get_secret_value(SecretId='algo-trading/angelone')
+    return json.loads(secret['SecretString'])
+
+_secrets    = get_secrets()
+API_KEY     = _secrets['api_key']
+CLIENT_CODE = _secrets['client_code']
+PASSWORD    = _secrets['password']
+TOTP_SECRET = _secrets['totp_secret']
+BOT_TOKEN   = _secrets['bot_token']
 
 should_stop_ec2_on_exit = False
-
-account_sid = 'AC6ef902b81d63731c13b746613aadb2aa'
-auth_token  = '06c408e1a82a20ae2b839f2cceac4705'
 
 # --------- Risk Config ---------
 RISK_1043    = 0.30
