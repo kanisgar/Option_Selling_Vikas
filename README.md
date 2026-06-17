@@ -330,4 +330,4 @@ This system is for personal use only. Options trading involves substantial risk.
 
 ---
 
-*Built and maintained by Kanisgar | EC2: i-0bc461a1bc178f190 | Running since June 2026*
+*Built and maintained by Kanisgar | EC2: i-0bc461a1bc178f190 | Running since April 2025*
